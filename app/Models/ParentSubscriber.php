@@ -1,0 +1,101 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class ParentSubscriber extends Model
+{
+    protected $fillable = [
+        'consent_id',
+        'email_address',
+        'name',
+        'segment_1',
+        'segment_2',
+        'segment_3',
+        'last_segment_used_1',
+        'last_segment_used_2',
+        'last_segment_used_3',
+        'delivery_id_1',
+        'delivery_id_2',
+        'delivery_id_3',
+        'delivery_status_1',
+        'delivery_status_2',
+        'delivery_status_3',
+        'parent_name_1',
+        'parent_name_2',
+        'parent_name_3',
+        'child_name_1',
+        'child_name_2',
+        'child_name_3',
+        'course_level_1',
+        'course_level_2',
+        'course_level_3',
+        'establishment_name_1',
+        'establishment_name_2',
+        'establishment_name_3',
+        'provider_name_1',
+        'provider_name_2',
+        'provider_name_3',
+        'provider_public_email_address_1',
+        'provider_public_email_address_2',
+        'provider_public_email_address_3',
+        'comms_start_date_1',
+        'comms_start_date_2',
+        'comms_start_date_3',
+        'cycle_and_helment_check_comms_date_1',
+        'cycle_and_helment_check_comms_date_2',
+        'cycle_and_helment_check_comms_date_3',
+        'pre_course_faq_comms_date_1',
+        'pre_course_faq_comms_date_2',
+        'pre_course_faq_comms_date_3',
+        'instructors_delivery_1',
+        'instructors_delivery_2',
+        'instructors_delivery_3',
+        'outcomes_journey_start_date_1',
+        'outcomes_journey_start_date_2',
+        'outcomes_journey_start_date_3',
+        'bikeability_club_link_1',
+        'bikeability_club_link_2',
+        'bikeability_club_link_3',
+        'survey_link_1',
+        'survey_link_2',
+        'survey_link_3',
+        'journey_confirmation_start_date_1',
+        'journey_confirmation_start_date_2',
+        'journey_confirmation_start_date_3',
+        'resubscribe',
+        'restart_subscription_based_autoresponders',
+        'consent_to_track',
+        'consent_to_send_sms',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'consent_id' => 'integer',
+            'last_segment_used_1' => 'integer',
+            'last_segment_used_2' => 'integer',
+            'last_segment_used_3' => 'integer',
+            'comms_start_date_1' => 'date:Y-m-d',
+            'comms_start_date_2' => 'date:Y-m-d',
+            'comms_start_date_3' => 'date:Y-m-d',
+            'cycle_and_helment_check_comms_date_1' => 'date:Y-m-d',
+            'cycle_and_helment_check_comms_date_2' => 'date:Y-m-d',
+            'cycle_and_helment_check_comms_date_3' => 'date:Y-m-d',
+            'pre_course_faq_comms_date_1' => 'date:Y-m-d',
+            'pre_course_faq_comms_date_2' => 'date:Y-m-d',
+            'pre_course_faq_comms_date_3' => 'date:Y-m-d',
+            'outcomes_journey_start_date_1' => 'date:Y-m-d',
+            'outcomes_journey_start_date_2' => 'date:Y-m-d',
+            'outcomes_journey_start_date_3' => 'date:Y-m-d',
+            'journey_confirmation_start_date_1' => 'date:Y-m-d',
+            'journey_confirmation_start_date_2' => 'date:Y-m-d',
+            'journey_confirmation_start_date_3' => 'date:Y-m-d',
+            'resubscribe' => 'boolean',
+            'restart_subscription_based_autoresponders' => 'boolean',
+        ];
+    }
+}

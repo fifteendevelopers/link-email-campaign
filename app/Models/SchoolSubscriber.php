@@ -1,0 +1,95 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class SchoolSubscriber extends Model
+{
+    protected $fillable = [
+        'consent_id',
+        'email_address',
+        'name',
+        'segment_1',
+        'segment_2',
+        'segment_3',
+        'last_segment_used_1',
+        'last_segment_used_2',
+        'last_segment_used_3',
+        'delivery_id_1',
+        'delivery_id_2',
+        'delivery_id_3',
+        'delivery_status_1',
+        'delivery_status_2',
+        'delivery_status_3',
+        'delivery_start_date_1',
+        'delivery_start_date_2',
+        'delivery_start_date_3',
+        'course_comms_start_date_1',
+        'course_comms_start_date_2',
+        'course_comms_start_date_3',
+        'pre_course_consent_check_comms_date_1',
+        'pre_course_consent_check_comms_date_2',
+        'pre_course_consent_check_comms_date_3',
+        'outstanding_consent_check_comms_date_1',
+        'outstanding_consent_check_comms_date_2',
+        'outstanding_consent_check_comms_date_3',
+        'final_consent_reminder_comms_date_1',
+        'final_consent_reminder_comms_date_2',
+        'final_consent_reminder_comms_date_3',
+        'first_name_1',
+        'first_name_2',
+        'first_name_3',
+        'provider_name_1',
+        'provider_name_2',
+        'provider_name_3',
+        'provider_contact_email_address_1',
+        'provider_contact_email_address_2',
+        'provider_contact_email_address_3',
+        'booking_link_1',
+        'booking_link_2',
+        'booking_link_3',
+        'establishment_name_1',
+        'establishment_name_2',
+        'establishment_name_3',
+        'journey_confirmation_start_date_1',
+        'journey_confirmation_start_date_2',
+        'journey_confirmation_start_date_3',
+        'resubscribe',
+        'restart_subscription_based_autoresponders',
+        'consent_to_track',
+        'consent_to_send_sms',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'consent_id' => 'integer',
+            'last_segment_used_1' => 'integer',
+            'last_segment_used_2' => 'integer',
+            'last_segment_used_3' => 'integer',
+            'delivery_start_date_1' => 'date:Y-m-d',
+            'delivery_start_date_2' => 'date:Y-m-d',
+            'delivery_start_date_3' => 'date:Y-m-d',
+            'course_comms_start_date_1' => 'date:Y-m-d',
+            'course_comms_start_date_2' => 'date:Y-m-d',
+            'course_comms_start_date_3' => 'date:Y-m-d',
+            'pre_course_consent_check_comms_date_1' => 'date:Y-m-d',
+            'pre_course_consent_check_comms_date_2' => 'date:Y-m-d',
+            'pre_course_consent_check_comms_date_3' => 'date:Y-m-d',
+            'outstanding_consent_check_comms_date_1' => 'date:Y-m-d',
+            'outstanding_consent_check_comms_date_2' => 'date:Y-m-d',
+            'outstanding_consent_check_comms_date_3' => 'date:Y-m-d',
+            'final_consent_reminder_comms_date_1' => 'date:Y-m-d',
+            'final_consent_reminder_comms_date_2' => 'date:Y-m-d',
+            'final_consent_reminder_comms_date_3' => 'date:Y-m-d',
+            'journey_confirmation_start_date_1' => 'date:Y-m-d',
+            'journey_confirmation_start_date_2' => 'date:Y-m-d',
+            'journey_confirmation_start_date_3' => 'date:Y-m-d',
+            'resubscribe' => 'boolean',
+            'restart_subscription_based_autoresponders' => 'boolean',
+        ];
+    }
+}

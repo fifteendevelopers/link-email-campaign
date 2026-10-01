@@ -13,6 +13,8 @@ class EmailTracking extends Model
 
     protected $fillable = [
         'tracking_id',
+        'parent_subscriber_id',
+        'school_subscriber_id',
         'recipient_email',
         'message_id',
         'subject',

@@ -1,8 +1,41 @@
 <?php
 
-use App\Http\Controllers\ParentEmailController;
-use App\Http\Controllers\SchoolEmailController;
+use App\Http\Controllers\Api\ParentSubscriberController;
+use App\Http\Controllers\Api\SchoolSubscriberController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware(['throttle:60,1', 'campaign.api'])->group(function (): void {
+    /*
+    |--------------------------------------------------------------------------
+    | Parent Subscriber
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('subscribers/parents')->name('api.subscribers.parents.')->group(function (): void {
+        Route::get('/', [ParentSubscriberController::class, 'show'])->name('show');
+        Route::post('/', [ParentSubscriberController::class, 'upsert'])->name('upsert');
+        Route::delete('/', [ParentSubscriberController::class, 'destroyByEmail'])->name('destroy-by-email');
+        // Route::get('{parentSubscriber}', [ParentSubscriberController::class, 'show'])->name('show');
+        Route::patch('{parentSubscriber}', [ParentSubscriberController::class, 'update'])->name('update');
+        Route::delete('{parentSubscriber}', [ParentSubscriberController::class, 'destroy'])->name('destroy');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | School Subscriber
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('subscribers/schools')->name('api.subscribers.schools.')->group(function (): void {
+        Route::get('/', [SchoolSubscriberController::class, 'show'])->name('show');
+        Route::post('/', [SchoolSubscriberController::class, 'upsert'])->name('upsert');
+        Route::delete('/', [SchoolSubscriberController::class, 'destroyByEmail'])->name('destroy-by-email');
+        // Route::get('{schoolSubscriber}', [SchoolSubscriberController::class, 'show'])->name('show');
+        Route::patch('{schoolSubscriber}', [SchoolSubscriberController::class, 'update'])->name('update');
+        Route::delete('{schoolSubscriber}', [SchoolSubscriberController::class, 'destroy'])->name('destroy');
+    });
+
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -28,23 +61,38 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('emails/parent')->name('api.emails.parent.')->group(function (): void {
-    Route::post('consent-confirmation', [ParentEmailController::class, 'sendConsentConfirmation'])
+    Route::post('consent-confirmation', [ParentSubscriberController::class, 'sendConsentConfirmation'])
         ->name('consent-confirmation');
 
-    Route::post('pre-course/how-to-get-ready', [ParentEmailController::class, 'sendPreCourseHowToGetReady'])
+    Route::post('join-bike-club', [ParentSubscriberController::class, 'joinBikeClub'])
+        ->name('join-bike-club');
+
+    Route::post('course-completion', [ParentSubscriberController::class, 'sendCourseCompletion'])
+        ->name('course-completion');
+
+    Route::post('delivery-deleted', [ParentSubscriberController::class, 'deliveryDeleted'])
+        ->name('delivery-deleted-notice');
+
+    Route::post('consent-removed', [ParentSubscriberController::class, 'consentRemoved'])
+        ->name('consent-removed');
+
+    /*
+    * @TODO: This routes are not necessary as we will be setting the dates for the emails automatically
+
+    Route::post('pre-course/how-to-get-ready', [ParentSubscriberController::class, 'sendPreCourseHowToGetReady'])
         ->name('pre-course.how-to-get-ready');
 
-    Route::post('pre-course/faq', [ParentEmailController::class, 'sendPreCourseFaq'])
+    Route::post('pre-course/faq', [ParentSubscriberController::class, 'sendPreCourseFaq'])
         ->name('pre-course.faq');
 
-    Route::post('pre-course/reminder', [ParentEmailController::class, 'sendPreCourseReminder'])
+    Route::post('pre-course/reminder', [ParentSubscriberController::class, 'sendPreCourseReminder'])
         ->name('pre-course.reminder');
 
-    Route::post('post-course/rider-report', [ParentEmailController::class, 'sendPostCourseRiderReport'])
+    Route::post('post-course/rider-report', [ParentSubscriberController::class, 'sendPostCourseRiderReport'])
         ->name('post-course.rider-report');
 
-    Route::post('post-course/parent-survey', [ParentEmailController::class, 'sendPostCourseParentSurvey'])
-        ->name('post-course.parent-survey');
+    Route::post('post-course/parent-survey', [ParentSubscriberController::class, 'sendPostCourseParentSurvey'])
+        ->name('post-course.parent-survey'); */
 });
 
 /*
@@ -65,21 +113,24 @@ Route::prefix('emails/parent')->name('api.emails.parent.')->group(function (): v
 */
 
 Route::prefix('emails/school')->name('api.emails.school.')->group(function (): void {
-    Route::post('pre-course/consent-check', [SchoolEmailController::class, 'sendConsentCheck'])
-        ->name('pre-course.consent-check');
+    Route::post('booking-completed', [SchoolSubscriberController::class, 'sendBookingCompleted'])
+        ->name('booking-completed');
 
-    Route::post('pre-course/consent-check-reminder', [SchoolEmailController::class, 'sendConsentCheckReminder'])
+    Route::post('delivery-deleted', [SchoolSubscriberController::class, 'deliveryDeleted'])
+        ->name('delivery-deleted');
+
+    /* Route::post('pre-course/consent-check-reminder', [SchoolSubscriberController::class, 'sendConsentCheckReminder'])
         ->name('pre-course.consent-check-reminder');
 
-    Route::post('pre-course/consent-check-outstanding', [SchoolEmailController::class, 'sendConsentCheckOutstanding'])
+    Route::post('pre-course/consent-check-outstanding', [SchoolSubscriberController::class, 'sendConsentCheckOutstanding'])
         ->name('pre-course.consent-check-outstanding');
 
-    Route::post('pre-course/consent-check-final-reminder', [SchoolEmailController::class, 'sendConsentCheckFinalReminder'])
+    Route::post('pre-course/consent-check-final-reminder', [SchoolSubscriberController::class, 'sendConsentCheckFinalReminder'])
         ->name('pre-course.consent-check-final-reminder');
 
-    Route::post('post-course/booking-confirmation', [SchoolEmailController::class, 'sendBookingConfirmation'])
+    Route::post('post-course/booking-confirmation', [SchoolSubscriberController::class, 'sendBookingConfirmation'])
         ->name('post-course.booking-confirmation');
 
-    Route::post('post-course/booking-confirmation-reminder', [SchoolEmailController::class, 'sendBookingConfirmationReminder'])
-        ->name('post-course.booking-confirmation-reminder');
+    Route::post('post-course/booking-confirmation-reminder', [SchoolSubscriberController::class, 'sendBookingConfirmationReminder'])
+        ->name('post-course.booking-confirmation-reminder'); */
 });

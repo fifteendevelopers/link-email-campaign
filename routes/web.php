@@ -71,6 +71,10 @@ Route::get('test', function () {
 Route::get('/consent-confirmation-email', [MailgunWebhookController::class, 'sendConsentConfirmationEmail'])
     ->name('emails.consent-confirmation.send');
 
+Route::get('/join-bike-club-email', function () {
+    return view('emails.parent_coms.consent_confirmation.bike_club');
+});
+
 Route::get('/pre-course-email', function () {
     return view('emails.parent_coms.pre_course.how_to_get_ready_for_bikeability');
 });

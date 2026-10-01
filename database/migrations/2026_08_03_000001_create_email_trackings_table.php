@@ -13,8 +13,10 @@ return new class extends Migration
         Schema::create('email_trackings', function (Blueprint $table) {
             $table->id();
             $table->uuid('tracking_id')->unique();
+            $table->unsignedBigInteger('parent_subscriber_id')->nullable();
+            $table->unsignedBigInteger('school_subscriber_id')->nullable();
             $table->string('recipient_email')->nullable()->index();
-            $table->string('message_id')->nullable()->index();
+            $table->unsignedBigInteger('message_id')->nullable()->index();
             $table->string('subject')->nullable();
 
             $table->timestamp('accepted_at')->nullable();
