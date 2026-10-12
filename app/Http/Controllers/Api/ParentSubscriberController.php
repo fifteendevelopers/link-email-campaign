@@ -114,7 +114,7 @@ class ParentSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "We've received {$data['childName']}'s Bikeability consent form",
-            template: 'emails.parent_coms.consent_confirmation.confirmation',
+            template: 'emails.parent_comms.consent_confirmation.confirmation',
             data: $data,
         );
     }
@@ -144,7 +144,7 @@ class ParentSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: 'How to get ready for Bikeability',
-            template: 'emails.parent_coms.pre_course.how_to_get_ready_for_bikeability',
+            template: 'emails.parent_comms.pre_course.how_to_get_ready_for_bikeability',
             data: $request->templateData(),
         );
     }
@@ -154,7 +154,7 @@ class ParentSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: 'Frequently Asked Questions, answered',
-            template: 'emails.parent_coms.pre_course.faq',
+            template: 'emails.parent_comms.pre_course.faq',
             data: $request->templateData(),
         );
     }
@@ -166,7 +166,7 @@ class ParentSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "Reminder: {$data['childName']} is booked for Bikeability cycle training soon",
-            template: 'emails.parent_coms.pre_course.reminder',
+            template: 'emails.parent_comms.pre_course.reminder',
             data: $data,
         );
     }
@@ -179,7 +179,7 @@ class ParentSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "{$data['childName']} did it!",
-            template: 'emails.parent_coms.post_course.rider_report',
+            template: 'emails.parent_comms.post_course.rider_report',
             data: $data,
         );
     }
@@ -192,7 +192,7 @@ class ParentSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: 'Please share your views',
-            template: 'emails.parent_coms.post_course.parent_survey',
+            template: 'emails.parent_comms.post_course.parent_survey',
             data: $data,
         );
     }

@@ -29,7 +29,7 @@ class MailgunWebhookController extends Controller
 
         $mail = new CampaignMail([
             'title' => $subject,
-            'template' => 'emails.parent_coms.consent_confirmation.confirmation',
+            'template' => 'emails.parent_comms.consent_confirmation.confirmation',
             'recipient' => $recipient,
             'first_name' => 'John',
             'last_name' => 'Doe',

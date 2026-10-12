@@ -60,11 +60,11 @@ class SendDueParentCommunicationsTest extends TestCase
         );
 
         foreach ([
-            'emails.parent_coms.consent_confirmation.confirmation',
-            'emails.parent_coms.pre_course.how_to_get_ready_for_bikeability',
-            'emails.parent_coms.pre_course.faq',
-            'emails.parent_coms.post_course.rider_report',
-            'emails.parent_coms.post_course.parent_survey',
+            'emails.parent_comms.consent_confirmation.confirmation',
+            'emails.parent_comms.pre_course.how_to_get_ready_for_bikeability',
+            'emails.parent_comms.pre_course.faq',
+            'emails.parent_comms.post_course.rider_report',
+            'emails.parent_comms.post_course.parent_survey',
         ] as $template) {
             Mail::assertSent(
                 CampaignMail::class,

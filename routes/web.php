@@ -72,28 +72,28 @@ Route::get('/consent-confirmation-email', [MailgunWebhookController::class, 'sen
     ->name('emails.consent-confirmation.send');
 
 Route::get('/join-bike-club-email', function () {
-    return view('emails.parent_coms.consent_confirmation.bike_club');
+    return view('emails.parent_comms.consent_confirmation.bike_club');
 });
 
 Route::get('/pre-course-email', function () {
-    return view('emails.parent_coms.pre_course.how_to_get_ready_for_bikeability');
+    return view('emails.parent_comms.pre_course.how_to_get_ready_for_bikeability');
 });
 
 Route::get('/pre-course-faq-email', function () {
-    return view('emails.parent_coms.pre_course.faq');
+    return view('emails.parent_comms.pre_course.faq');
 });
 
 Route::get('/pre-course-reminder-email', function () {
-    return view('emails.parent_coms.pre_course.reminder');
+    return view('emails.parent_comms.pre_course.reminder');
 });
 
 /* Post Course Emails */
 Route::get('/post-course-rider-report-email', function () {
-    return view('emails.parent_coms.post_course.rider_report');
+    return view('emails.parent_comms.post_course.rider_report');
 });
 
 Route::get('/post-course-parent-survey-email', function () {
-    return view('emails.parent_coms.post_course.parent_survey');
+    return view('emails.parent_comms.post_course.parent_survey');
 });
 
 /* School Pre Course Emails */

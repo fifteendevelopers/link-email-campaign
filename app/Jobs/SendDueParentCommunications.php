@@ -75,31 +75,31 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
             [
                 'date' => 'journey_confirmation_start_date',
                 'sent' => 'journey_confirmation_sent_at',
-                'template' => 'emails.parent_coms.consent_confirmation.confirmation',
+                'template' => 'emails.parent_comms.consent_confirmation.confirmation',
                 'subject' => static fn (array $data): string => "We've received {$data['childName']}'s Bikeability consent form",
             ],
             [
                 'date' => 'cycle_and_helment_check_comms_date',
                 'sent' => 'cycle_and_helment_check_sent_at',
-                'template' => 'emails.parent_coms.pre_course.how_to_get_ready_for_bikeability',
+                'template' => 'emails.parent_comms.pre_course.how_to_get_ready_for_bikeability',
                 'subject' => static fn (array $data): string => 'How to get ready for Bikeability',
             ],
             [
                 'date' => 'pre_course_faq_comms_date',
                 'sent' => 'pre_course_faq_sent_at',
-                'template' => 'emails.parent_coms.pre_course.faq',
+                'template' => 'emails.parent_comms.pre_course.faq',
                 'subject' => static fn (array $data): string => 'Frequently Asked Questions, answered',
             ],
             [
                 'date' => 'outcomes_journey_start_date',
                 'sent' => 'outcomes_journey_sent_at',
-                'template' => 'emails.parent_coms.post_course.rider_report',
+                'template' => 'emails.parent_comms.post_course.rider_report',
                 'subject' => static fn (array $data): string => "{$data['childName']} did it!",
             ],
             [
                 'date' => 'outcome_survey_comms_date',
                 'sent' => 'outcome_survey_sent_at',
-                'template' => 'emails.parent_coms.post_course.parent_survey',
+                'template' => 'emails.parent_comms.post_course.parent_survey',
                 'subject' => static fn (array $data): string => 'Please share your views',
             ],
         ];
