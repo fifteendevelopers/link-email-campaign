@@ -58,7 +58,10 @@ class ParentSubscriberController extends Controller
         ParentSubscriberRequest $request,
         ParentSubscriber $parentSubscriber,
     ): JsonResponse {
-        $parentSubscriber->update($request->validated());
+        $parentSubscriber->update($this->resetChangedCommunicationDates(
+            $request->subscriberAttributes(),
+            $parentSubscriber,
+        ));
 
         return response()->json([
             'message' => 'Parent subscriber updated successfully.',
@@ -209,10 +212,13 @@ class ParentSubscriberController extends Controller
 
     private function persistSubscriber(ParentSubscriberRequest $request): JsonResponse
     {
-        $attributes = $request->validated();
+        $attributes = $request->subscriberAttributes();
+        $identity = $this->subscriberIdentity($attributes);
+        $existingSubscriber = ParentSubscriber::query()->where($identity)->first();
+
         $subscriber = ParentSubscriber::query()->updateOrCreate(
-            $this->subscriberIdentity($attributes),
-            $attributes,
+            $identity,
+            $this->resetChangedCommunicationDates($attributes, $existingSubscriber),
         );
 
         return response()->json([
@@ -221,6 +227,48 @@ class ParentSubscriberController extends Controller
                 : 'Parent subscriber updated successfully.',
             'data' => $subscriber->fresh(),
         ], $subscriber->wasRecentlyCreated ? Response::HTTP_CREATED : Response::HTTP_OK);
+    }
+
+    /**
+     * Clear delivery markers only when a segment receives a different
+     * communication date, allowing reused segments to send their new emails.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function resetChangedCommunicationDates(
+        array $attributes,
+        ?ParentSubscriber $subscriber,
+    ): array {
+        if ($subscriber === null) {
+            return $attributes;
+        }
+
+        $communicationColumns = [
+            'journey_confirmation_start_date' => 'journey_confirmation_sent_at',
+            'cycle_and_helment_check_comms_date' => 'cycle_and_helment_check_sent_at',
+            'pre_course_faq_comms_date' => 'pre_course_faq_sent_at',
+            'outcomes_journey_start_date' => 'outcomes_journey_sent_at',
+            'outcome_survey_comms_date' => 'outcome_survey_sent_at',
+        ];
+
+        foreach (range(1, 3) as $segment) {
+            foreach ($communicationColumns as $date => $sentAt) {
+                $dateColumn = "{$date}_{$segment}";
+
+                if (! array_key_exists($dateColumn, $attributes)) {
+                    continue;
+                }
+
+                $storedDate = $subscriber->getAttribute($dateColumn)?->toDateString();
+
+                if ($storedDate !== $attributes[$dateColumn]) {
+                    $attributes["{$sentAt}_{$segment}"] = null;
+                }
+            }
+        }
+
+        return $attributes;
     }
 
     private function updateDeliveryStatuses(ParentSubscriberRequest $request): JsonResponse

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Carbon\CarbonImmutable;
+
 class ParentSubscriberRequest extends SubscriberRequest
 {
     /**
@@ -30,10 +32,56 @@ class ParentSubscriberRequest extends SubscriberRequest
                 'pre_course_faq_comms_date' => ['sometimes', 'nullable', 'date'],
                 'instructors_delivery' => ['sometimes', 'nullable', 'string'],
                 'outcomes_journey_start_date' => ['sometimes', 'nullable', 'date'],
+                'outcome_survey_comms_date' => ['sometimes', 'nullable', 'date'],
                 'bikeability_club_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
                 'survey_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
             ]),
         ];
+    }
+
+    /**
+     * Return validated subscriber data with communication dates derived from
+     * their campaign journey start dates.
+     *
+     * @return array<string, mixed>
+     */
+    public function subscriberAttributes(): array
+    {
+        $attributes = $this->validated();
+
+        foreach (range(1, 3) as $segment) {
+            foreach ([
+                'journey_confirmation_start_date',
+                'comms_start_date',
+                'cycle_and_helment_check_comms_date',
+                'pre_course_faq_comms_date',
+                'outcomes_journey_start_date',
+                'outcome_survey_comms_date',
+            ] as $dateField) {
+                $dateColumn = "{$dateField}_{$segment}";
+
+                if (array_key_exists($dateColumn, $attributes)) {
+                    $attributes[$dateColumn] = $this->dateValue($attributes[$dateColumn])?->toDateString();
+                }
+            }
+
+            $commsStartDate = "comms_start_date_{$segment}";
+
+            if (array_key_exists($commsStartDate, $attributes)) {
+                $date = $this->dateValue($attributes[$commsStartDate]);
+                $attributes["cycle_and_helment_check_comms_date_{$segment}"] = $date?->toDateString();
+                $attributes["pre_course_faq_comms_date_{$segment}"] = $date?->addDays(5)->toDateString();
+            }
+
+            $outcomesStartDate = "outcomes_journey_start_date_{$segment}";
+
+            if (array_key_exists($outcomesStartDate, $attributes)) {
+                $date = $this->dateValue($attributes[$outcomesStartDate]);
+                $attributes["outcome_survey_comms_date_{$segment}"] = $date?->addDays(2)->toDateString();
+            }
+        }
+
+        return $attributes;
     }
 
     /**
@@ -178,5 +226,14 @@ class ParentSubscriberRequest extends SubscriberRequest
         }
 
         return null;
+    }
+
+    private function dateValue(mixed $value): ?CarbonImmutable
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return CarbonImmutable::parse((string) $value);
     }
 }

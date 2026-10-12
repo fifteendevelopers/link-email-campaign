@@ -25,6 +25,7 @@ return new class extends Migration
             $addSegmentedColumns(fn (int $segment) => $table->unsignedBigInteger("delivery_id_{$segment}")->nullable());
             $addSegmentedColumns(fn (int $segment) => $table->string("delivery_status_{$segment}")->default('active'));
             $addSegmentedColumns(fn (int $segment) => $table->date("delivery_start_date_{$segment}")->nullable());
+            $addSegmentedColumns(fn (int $segment) => $table->date("journey_confirmation_start_date_{$segment}")->nullable());
             $addSegmentedColumns(fn (int $segment) => $table->date("course_comms_start_date_{$segment}")->nullable());
             $addSegmentedColumns(fn (int $segment) => $table->date("pre_course_consent_check_comms_date_{$segment}")->nullable());
             $addSegmentedColumns(fn (int $segment) => $table->date("outstanding_consent_check_comms_date_{$segment}")->nullable());
@@ -34,7 +35,6 @@ return new class extends Migration
             $addSegmentedColumns(fn (int $segment) => $table->string("provider_contact_email_address_{$segment}")->nullable());
             $addSegmentedColumns(fn (int $segment) => $table->string("booking_link_{$segment}")->nullable());
             $addSegmentedColumns(fn (int $segment) => $table->string("establishment_name_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->date("journey_confirmation_start_date_{$segment}")->nullable());
 
             $table->boolean('resubscribe')->default(true);
             $table->boolean('restart_subscription_based_autoresponders')->default(true);

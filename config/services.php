@@ -39,6 +39,7 @@ return [
     'link_email_campaign' => [
         'username' => env('APP_LINK_API_USER'),
         'secret' => env('APP_LINK_API_SECRET'),
+        'comms_timezone' => env('PARENT_COMMS_TIMEZONE', 'Europe/London'),
     ],
 
     'slack' => [
