@@ -54,7 +54,12 @@ class SchoolSubscriberController extends Controller
         SchoolSubscriberRequest $request,
         SchoolSubscriber $schoolSubscriber,
     ): JsonResponse {
-        $schoolSubscriber->update($request->validated());
+        $schoolSubscriber->update(
+            $this->resetChangedCommunicationDates(
+                $request->subscriberAttributes(),
+                $schoolSubscriber,
+            ),
+        );
 
         return response()->json([
             'message' => 'School subscriber updated successfully.',
@@ -107,7 +112,7 @@ class SchoolSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "Upcoming Bikeability - action required! Complete consent checks and finalise numbers for {$data['establishmentName']}",
-            template: 'emails.school_coms.pre_course.consent_check',
+            template: 'emails.school_comms.pre_course.consent_check',
             data: $data,
         );
     }
@@ -119,7 +124,7 @@ class SchoolSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "Reminder: complete consent checks and finalise numbers for Bikeability at {$data['establishmentName']}",
-            template: 'emails.school_coms.pre_course.consent_check_reminder',
+            template: 'emails.school_comms.pre_course.consent_check_reminder',
             data: $data,
         );
     }
@@ -131,7 +136,7 @@ class SchoolSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "Check your outstanding Bikeability consents for {$data['establishmentName']}",
-            template: 'emails.school_coms.pre_course.consent_check_outstanding',
+            template: 'emails.school_comms.pre_course.consent_check_outstanding',
             data: $data,
         );
     }
@@ -143,7 +148,7 @@ class SchoolSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "Final reminder: Are you ready for Bikeability at {$data['establishmentName']}?",
-            template: 'emails.school_coms.pre_course.consent_check_final_reminder',
+            template: 'emails.school_comms.pre_course.consent_check_final_reminder',
             data: $data,
         );
     }
@@ -155,7 +160,7 @@ class SchoolSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "Booking confirmation: Bikeability cycle training at {$data['establishmentName']}",
-            template: 'emails.school_coms.post_course.booking_confirmation',
+            template: 'emails.school_comms.booking_confirmation.booking_confirmation',
             data: $data,
         );
     }
@@ -167,7 +172,7 @@ class SchoolSubscriberController extends Controller
         return $this->send(
             recipient: $request->validated('recipient'),
             subject: "Reminder: Booking confirmation for Bikeability cycle training at {$data['establishmentName']}",
-            template: 'emails.school_coms.post_course.booking_confirmation_reminder',
+            template: 'emails.school_comms.booking_confirmation.booking_confirmation_reminder',
             data: $data,
         );
     }
@@ -227,10 +232,13 @@ class SchoolSubscriberController extends Controller
 
     private function persistSubscriber(SchoolSubscriberRequest $request): JsonResponse
     {
-        $attributes = $request->validated();
+        $attributes = $request->subscriberAttributes();
+        $identity = $this->subscriberIdentity($attributes);
+        $existingSubscriber = SchoolSubscriber::query()->where($identity)->first();
+
         $subscriber = SchoolSubscriber::query()->updateOrCreate(
-            $this->subscriberIdentity($attributes),
-            $attributes,
+            $identity,
+            $this->resetChangedCommunicationDates($attributes, $existingSubscriber),
         );
 
         return response()->json([
@@ -239,5 +247,46 @@ class SchoolSubscriberController extends Controller
                 : 'School subscriber updated successfully.',
             'data' => $subscriber->fresh(),
         ], $subscriber->wasRecentlyCreated ? Response::HTTP_CREATED : Response::HTTP_OK);
+    }
+
+    /**
+     * Clear delivery markers when a communication date changes so a reused
+     * segment can send its new sequence.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function resetChangedCommunicationDates(
+        array $attributes,
+        ?SchoolSubscriber $subscriber,
+    ): array {
+        if ($subscriber === null) {
+            return $attributes;
+        }
+
+        $communicationColumns = [
+            'journey_confirmation_start_date' => 'journey_confirmation_sent_at',
+            'pre_course_consent_check_comms_date' => 'pre_course_consent_check_sent_at',
+            'outstanding_consent_check_comms_date' => 'outstanding_consent_check_sent_at',
+            'final_consent_reminder_comms_date' => 'final_consent_reminder_sent_at',
+        ];
+
+        foreach (range(1, 3) as $segment) {
+            foreach ($communicationColumns as $date => $sentAt) {
+                $dateColumn = "{$date}_{$segment}";
+
+                if (! array_key_exists($dateColumn, $attributes)) {
+                    continue;
+                }
+
+                $storedDate = $subscriber->getAttribute($dateColumn)?->toDateString();
+
+                if ($storedDate !== $attributes[$dateColumn]) {
+                    $attributes["{$sentAt}_{$segment}"] = null;
+                }
+            }
+        }
+
+        return $attributes;
     }
 }

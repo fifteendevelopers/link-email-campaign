@@ -305,7 +305,10 @@ class SubscriberApiTest extends TestCase
             ->assertJsonPath('data.segment_2', 2)
             ->assertJsonPath('data.delivery_id_2', 10)
             ->assertJsonPath('data.delivery_start_date_2', '2026-11-10')
-            ->assertJsonPath('data.journey_confirmation_start_date_2', '2026-10-15');
+            ->assertJsonPath('data.journey_confirmation_start_date_2', '2026-10-15')
+            ->assertJsonPath('data.pre_course_consent_check_comms_date_2', '2026-10-20')
+            ->assertJsonPath('data.outstanding_consent_check_comms_date_2', '2026-10-27')
+            ->assertJsonPath('data.final_consent_reminder_comms_date_2', '2026-10-31');
 
         $this->assertDatabaseHas('school_subscribers', [
             'email_address' => 'school@example.com',

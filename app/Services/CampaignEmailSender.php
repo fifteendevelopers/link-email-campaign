@@ -21,10 +21,12 @@ class CampaignEmailSender
         string $template,
         array $data,
         ?int $parentSubscriberId = null,
+        ?int $schoolSubscriberId = null,
     ): EmailTracking {
         $tracking = EmailTracking::create([
             'tracking_id' => (string) Str::uuid(),
             'parent_subscriber_id' => $parentSubscriberId,
+            'school_subscriber_id' => $schoolSubscriberId,
             'recipient_email' => $recipient,
             'subject' => $subject,
         ]);

@@ -98,26 +98,26 @@ Route::get('/post-course-parent-survey-email', function () {
 
 /* School Pre Course Emails */
 Route::get('/school-pre-course-consent-check-email', function () {
-    return view('emails.school_coms.pre_course.consent_check');
+    return view('emails.school_comms.pre_course.consent_check');
 });
 
 Route::get('/school-pre-course-consent-check-reminder-email', function () {
-    return view('emails.school_coms.pre_course.consent_check_reminder');
+    return view('emails.school_comms.pre_course.consent_check_reminder');
 });
 
 Route::get('/school-pre-course-consent-check-outstanding-email', function () {
-    return view('emails.school_coms.pre_course.consent_check_outstanding');
+    return view('emails.school_comms.pre_course.consent_check_outstanding');
 });
 
 Route::get('/school-pre-course-consent-check-final-reminder-email', function () {
-    return view('emails.school_coms.pre_course.consent_check_final_reminder');
+    return view('emails.school_comms.pre_course.consent_check_final_reminder');
 });
 
 /* School Post Course Emails */
 Route::get('/school-post-course-booking-confirmation-email', function () {
-    return view('emails.school_coms.post_course.booking_confirmation');
+    return view('emails.school_comms.booking_confirmation.booking_confirmation');
 });
 
 Route::get('/school-post-course-booking-confirmation-reminder-email', function () {
-    return view('emails.school_coms.post_course.booking_confirmation_reminder');
+    return view('emails.school_comms.booking_confirmation.booking_confirmation_reminder');
 });
