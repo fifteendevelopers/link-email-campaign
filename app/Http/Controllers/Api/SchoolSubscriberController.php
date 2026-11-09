@@ -13,7 +13,6 @@ use App\Models\SchoolSubscriber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class SchoolSubscriberController extends Controller
@@ -78,19 +77,14 @@ class SchoolSubscriberController extends Controller
     {
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
-            'delivery_id' => ['sometimes', 'string', 'max:255'],
+            'delivery_id' => ['sometimes', 'integer', 'min:1'],
         ]);
 
         $query = SchoolSubscriber::query()
             ->where('email_address', strtolower($validated['email']))
             ->when(
                 $validated['delivery_id'] ?? null,
-                fn ($builder, string $deliveryId) => $builder->where(
-                    fn ($deliveryQuery) => $deliveryQuery
-                        ->where('delivery_id_1', $deliveryId)
-                        ->orWhere('delivery_id_2', $deliveryId)
-                        ->orWhere('delivery_id_3', $deliveryId),
-                ),
+                fn ($builder, int $deliveryId) => $builder->where('delivery_id', $deliveryId),
             );
 
         $deletedCount = $query->delete();
@@ -184,26 +178,22 @@ class SchoolSubscriberController extends Controller
 
     public function deliveryDeleted(SchoolSubscriberRequest $request): JsonResponse
     {
-        $statusUpdates = $request->deliveryStatusUpdates();
+        $deliveryStatus = $request->deliveryStatus();
 
-        if ($statusUpdates === []) {
+        if ($deliveryStatus === null) {
             throw ValidationException::withMessages([
-                'CustomFields' => 'At least one deliveryStatus{segment} custom field is required.',
+                'CustomFields' => 'A deliveryStatus custom field is required.',
             ]);
         }
 
         $emailAddress = $request->validated('email_address');
-        $updatedCount = DB::transaction(function () use ($emailAddress, $statusUpdates): int {
-            $attributes = [];
-
-            foreach ($statusUpdates as $segment => $deliveryStatus) {
-                $attributes["delivery_status_{$segment}"] = $deliveryStatus;
-            }
-
-            return SchoolSubscriber::query()
-                ->where('email_address', $emailAddress)
-                ->update($attributes);
-        });
+        $updatedCount = SchoolSubscriber::query()
+            ->where('email_address', $emailAddress)
+            ->when(
+                $request->validated('delivery_id'),
+                fn ($query, $deliveryId) => $query->where('delivery_id', $deliveryId),
+            )
+            ->update(['delivery_status' => $deliveryStatus]);
 
         if ($updatedCount === 0) {
             return response()->json([
@@ -223,6 +213,13 @@ class SchoolSubscriberController extends Controller
      */
     private function subscriberIdentity(array $attributes): array
     {
+        if (isset($attributes['delivery_id'], $attributes['email_address'])) {
+            return [
+                'delivery_id' => $attributes['delivery_id'],
+                'email_address' => $attributes['email_address'],
+            ];
+        }
+
         if (isset($attributes['consent_id'])) {
             return ['consent_id' => $attributes['consent_id']];
         }
@@ -250,8 +247,8 @@ class SchoolSubscriberController extends Controller
     }
 
     /**
-     * Clear delivery markers when a communication date changes so a reused
-     * segment can send its new sequence.
+     * Clear a sent marker when its communication date changes so the new
+     * date can send again.
      *
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
@@ -271,19 +268,15 @@ class SchoolSubscriberController extends Controller
             'final_consent_reminder_comms_date' => 'final_consent_reminder_sent_at',
         ];
 
-        foreach (range(1, 3) as $segment) {
-            foreach ($communicationColumns as $date => $sentAt) {
-                $dateColumn = "{$date}_{$segment}";
+        foreach ($communicationColumns as $date => $sentAt) {
+            if (! array_key_exists($date, $attributes)) {
+                continue;
+            }
 
-                if (! array_key_exists($dateColumn, $attributes)) {
-                    continue;
-                }
+            $storedDate = $subscriber->getAttribute($date)?->toDateString();
 
-                $storedDate = $subscriber->getAttribute($dateColumn)?->toDateString();
-
-                if ($storedDate !== $attributes[$dateColumn]) {
-                    $attributes["{$sentAt}_{$segment}"] = null;
-                }
+            if ($storedDate !== $attributes[$date]) {
+                $attributes[$sentAt] = null;
             }
         }
 

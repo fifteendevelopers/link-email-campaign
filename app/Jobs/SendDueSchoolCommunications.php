@@ -27,37 +27,34 @@ class SendDueSchoolCommunications implements ShouldBeUnique, ShouldQueue
         $dueDate = today($timezone)->toDateString();
 
         foreach ($this->communications() as $communication) {
-            foreach (range(1, 3) as $segment) {
-                $dateColumn = "{$communication['date']}_{$segment}";
-                $sentColumn = "{$communication['sent']}_{$segment}";
+            $dateColumn = $communication['date'];
+            $sentColumn = $communication['sent'];
 
-                SchoolSubscriber::query()
-                    ->where("delivery_status_{$segment}", 'active')
-                    ->whereNotNull($dateColumn)
-                    ->whereDate($dateColumn, '<=', $dueDate)
-                    ->whereNull($sentColumn)
-                    ->orderBy('id')
-                    ->chunkById(100, function ($subscribers) use (
-                        $communication,
-                        $emailSender,
-                        $segment,
-                        $sentColumn,
-                    ): void {
-                        foreach ($subscribers as $subscriber) {
-                            $data = $this->templateData($subscriber, $segment);
+            SchoolSubscriber::query()
+                ->where('delivery_status', 'active')
+                ->whereNotNull($dateColumn)
+                ->whereDate($dateColumn, '<=', $dueDate)
+                ->whereNull($sentColumn)
+                ->orderBy('id')
+                ->chunkById(100, function ($subscribers) use (
+                    $communication,
+                    $emailSender,
+                    $sentColumn,
+                ): void {
+                    foreach ($subscribers as $subscriber) {
+                        $data = $this->templateData($subscriber);
 
-                            $emailSender->send(
-                                recipient: $subscriber->email_address,
-                                subject: $communication['subject']($data),
-                                template: $communication['template'],
-                                data: $data,
-                                schoolSubscriberId: $subscriber->id,
-                            );
+                        $emailSender->send(
+                            recipient: $subscriber->email_address,
+                            subject: $communication['subject']($data),
+                            template: $communication['template'],
+                            data: $data,
+                            schoolSubscriberId: $subscriber->id,
+                        );
 
-                            $subscriber->forceFill([$sentColumn => now()])->save();
-                        }
-                    });
-            }
+                        $subscriber->forceFill([$sentColumn => now()])->save();
+                    }
+                });
         }
     }
 
@@ -102,14 +99,14 @@ class SendDueSchoolCommunications implements ShouldBeUnique, ShouldQueue
     /**
      * @return array<string, mixed>
      */
-    private function templateData(SchoolSubscriber $subscriber, int $segment): array
+    private function templateData(SchoolSubscriber $subscriber): array
     {
         return [
-            'firstName' => $subscriber->getAttribute("first_name_{$segment}"),
-            'establishmentName' => $subscriber->getAttribute("establishment_name_{$segment}"),
-            'providerName' => $subscriber->getAttribute("provider_name_{$segment}"),
-            'providerContactEmail' => $subscriber->getAttribute("provider_contact_email_address_{$segment}"),
-            'bookingLink' => $subscriber->getAttribute("booking_link_{$segment}"),
+            'firstName' => $subscriber->first_name,
+            'establishmentName' => $subscriber->establishment_name,
+            'providerName' => $subscriber->provider_name,
+            'providerContactEmail' => $subscriber->provider_contact_email_address,
+            'bookingLink' => $subscriber->booking_link,
         ];
     }
 }

@@ -20,22 +20,20 @@ class ParentSubscriberRequest extends SubscriberRequest
     {
         return [
             ...$this->commonRules(),
-            ...$this->segmentedRules([
-                'parent_name' => ['sometimes', 'nullable', 'string', 'max:255'],
-                'child_name' => ['sometimes', 'nullable', 'string', 'max:255'],
-                'course_level' => ['sometimes', 'nullable', 'string', 'max:255'],
-                'establishment_name' => ['sometimes', 'nullable', 'string', 'max:255'],
-                'provider_name' => ['sometimes', 'nullable', 'string', 'max:255'],
-                'provider_public_email_address' => ['sometimes', 'nullable', 'email', 'max:255'],
-                'comms_start_date' => ['sometimes', 'nullable', 'date'],
-                'cycle_and_helment_check_comms_date' => ['sometimes', 'nullable', 'date'],
-                'pre_course_faq_comms_date' => ['sometimes', 'nullable', 'date'],
-                'instructors_delivery' => ['sometimes', 'nullable', 'string'],
-                'outcomes_journey_start_date' => ['sometimes', 'nullable', 'date'],
-                'outcome_survey_comms_date' => ['sometimes', 'nullable', 'date'],
-                'bikeability_club_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
-                'survey_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
-            ]),
+            'parent_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'child_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'course_level' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'establishment_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'provider_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'provider_public_email_address' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'comms_start_date' => ['sometimes', 'nullable', 'date'],
+            'cycle_and_helment_check_comms_date' => ['sometimes', 'nullable', 'date'],
+            'pre_course_faq_comms_date' => ['sometimes', 'nullable', 'date'],
+            'instructors_delivery' => ['sometimes', 'nullable', 'string'],
+            'outcomes_journey_start_date' => ['sometimes', 'nullable', 'date'],
+            'outcome_survey_comms_date' => ['sometimes', 'nullable', 'date'],
+            'bikeability_club_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
+            'survey_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
         ];
     }
 
@@ -49,57 +47,31 @@ class ParentSubscriberRequest extends SubscriberRequest
     {
         $attributes = $this->validated();
 
-        foreach (range(1, 3) as $segment) {
-            foreach ([
-                'journey_confirmation_start_date',
-                'comms_start_date',
-                'cycle_and_helment_check_comms_date',
-                'pre_course_faq_comms_date',
-                'outcomes_journey_start_date',
-                'outcome_survey_comms_date',
-            ] as $dateField) {
-                $dateColumn = "{$dateField}_{$segment}";
-
-                if (array_key_exists($dateColumn, $attributes)) {
-                    $attributes[$dateColumn] = $this->dateValue($attributes[$dateColumn])?->toDateString();
-                }
+        foreach ([
+            'journey_confirmation_start_date',
+            'comms_start_date',
+            'cycle_and_helment_check_comms_date',
+            'pre_course_faq_comms_date',
+            'outcomes_journey_start_date',
+            'outcome_survey_comms_date',
+        ] as $dateField) {
+            if (array_key_exists($dateField, $attributes)) {
+                $attributes[$dateField] = $this->dateValue($attributes[$dateField])?->toDateString();
             }
+        }
 
-            $commsStartDate = "comms_start_date_{$segment}";
+        if (array_key_exists('comms_start_date', $attributes)) {
+            $date = $this->dateValue($attributes['comms_start_date']);
+            $attributes['cycle_and_helment_check_comms_date'] = $date?->toDateString();
+            $attributes['pre_course_faq_comms_date'] = $date?->addDays(5)->toDateString();
+        }
 
-            if (array_key_exists($commsStartDate, $attributes)) {
-                $date = $this->dateValue($attributes[$commsStartDate]);
-                $attributes["cycle_and_helment_check_comms_date_{$segment}"] = $date?->toDateString();
-                $attributes["pre_course_faq_comms_date_{$segment}"] = $date?->addDays(5)->toDateString();
-            }
-
-            $outcomesStartDate = "outcomes_journey_start_date_{$segment}";
-
-            if (array_key_exists($outcomesStartDate, $attributes)) {
-                $date = $this->dateValue($attributes[$outcomesStartDate]);
-                $attributes["outcome_survey_comms_date_{$segment}"] = $date?->addDays(2)->toDateString();
-            }
+        if (array_key_exists('outcomes_journey_start_date', $attributes)) {
+            $date = $this->dateValue($attributes['outcomes_journey_start_date']);
+            $attributes['outcome_survey_comms_date'] = $date?->addDays(2)->toDateString();
         }
 
         return $attributes;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    public function deliveryStatusUpdates(): array
-    {
-        $updates = [];
-
-        foreach (range(1, 3) as $segment) {
-            $value = $this->customField("DeliveryStatus{$segment}");
-
-            if ($value !== null) {
-                $updates[$segment] = (string) $value;
-            }
-        }
-
-        return $updates;
     }
 
     protected function prepareForValidation(): void
@@ -118,69 +90,104 @@ class ParentSubscriberRequest extends SubscriberRequest
      */
     private function campaignAttributes(): array
     {
-        $attributes = array_filter([
-            'email_address' => $this->input('EmailAddress'),
-            'name' => $this->input('Name'),
-            'resubscribe' => $this->input('Resubscribe'),
-            'restart_subscription_based_autoresponders' => $this->input('RestartSubscriptionBasedAutoresponders'),
-            'consent_to_track' => $this->input('ConsentToTrack'),
-            'consent_to_send_sms' => $this->input('ConsentToSendSms'),
+        $attributes = $this->baseAttributes();
+        $this->campaignCustomFields = $this->indexedCustomFields();
+
+        foreach ($this->mappedCustomFields() as $column => $value) {
+            $attributes[$column] = $value;
+        }
+
+        return $this->applyRootFieldAttributes($attributes);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function baseAttributes(): array
+    {
+        return array_filter([
+            'email_address' => $this->firstInput('email_address', 'email', 'EmailAddress'),
+            'name' => $this->firstInput('name', 'Name'),
+            'resubscribe' => $this->firstInput('resubscribe', 'Resubscribe'),
+            'restart_subscription_based_autoresponders' => $this->firstInput(
+                'restart_subscription_based_autoresponders',
+                'RestartSubscriptionBasedAutoresponders',
+            ),
+            'consent_to_track' => $this->firstInput('consent_to_track', 'ConsentToTrack'),
+            'consent_to_send_sms' => $this->firstInput('consent_to_send_sms', 'ConsentToSendSms'),
         ], static fn (mixed $value): bool => $value !== null);
+    }
 
-        $this->campaignCustomFields = $this->campaignCustomFields();
+    /**
+     * @return array<string, mixed>
+     */
+    private function mappedCustomFields(): array
+    {
+        $attributes = [];
 
-        if ($this->campaignCustomFields === []) {
-            return $attributes;
-        }
-
-        $lastSegmentUsed = $this->customField('Last Segment Used');
-
-        if ($lastSegmentUsed !== null) {
-            $lastSegmentNumber = filter_var(
-                $lastSegmentUsed,
-                FILTER_VALIDATE_INT,
-                ['options' => ['min_range' => 1, 'max_range' => 3]],
-            );
-
-            if ($lastSegmentNumber !== false) {
-                $attributes["last_segment_used_{$lastSegmentNumber}"] = $lastSegmentUsed;
+        foreach ($this->campaignCustomFields as $key => $value) {
+            if (! is_string($key) || $value === null || $value === '' || is_array($value)) {
+                continue;
             }
+
+            $normalized = strtolower((string) preg_replace('/[^a-z0-9]/i', '', $key));
+            $databaseKey = $this->fieldMap()[$normalized] ?? null;
+
+            if ($databaseKey === null) {
+                continue;
+            }
+
+            $attributes[$databaseKey] = $value;
         }
 
-        $fieldMap = [
-            'Segment' => 'segment',
-            'DeliveryId' => 'delivery_id',
-            'DeliveryStatus' => 'delivery_status',
-            'ParentName' => 'parent_name',
-            'ChildName' => 'child_name',
-            'CourseLevel' => 'course_level',
-            'EstablishmentName' => 'establishment_name',
-            'ProviderName' => 'provider_name',
-            'ProviderPublicEmailAddress' => 'provider_public_email_address',
-            'CommsStartDate' => 'comms_start_date',
-            'CycleAndHelmentCheckCommsDate' => 'cycle_and_helment_check_comms_date',
-            'PreCourseFaqCommsDate' => 'pre_course_faq_comms_date',
-            'JourneyConfirmationStartDate' => 'journey_confirmation_start_date',
-            'InstructorsDelivery' => 'instructors_delivery',
-            'OutcomesJourneyStartDate' => 'outcomes_journey_start_date',
-            'BikeabilityClubLink' => 'bikeability_club_link',
-            'SurveyLink' => 'survey_link',
+        return $attributes;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function fieldMap(): array
+    {
+        return [
+            'deliveryid' => 'delivery_id',
+            'deliverystatus' => 'delivery_status',
+            'parentname' => 'parent_name',
+            'childname' => 'child_name',
+            'courselevel' => 'course_level',
+            'establishmentname' => 'establishment_name',
+            'providername' => 'provider_name',
+            'providerpublicemailaddress' => 'provider_public_email_address',
+            'commsstartdate' => 'comms_start_date',
+            'cycleandhelmentcheckcommsdate' => 'cycle_and_helment_check_comms_date',
+            'precoursefaqcommsdate' => 'pre_course_faq_comms_date',
+            'journeyconfirmationstartdate' => 'journey_confirmation_start_date',
+            'instructorsdelivery' => 'instructors_delivery',
+            'outcomesjourneystartdate' => 'outcomes_journey_start_date',
+            'bikeabilityclublink' => 'bikeability_club_link',
+            'surveylink' => 'survey_link',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function applyRootFieldAttributes(array $attributes): array
+    {
+        $rootFields = [
+            'child_name' => ['childName', 'ChildName'],
+            'journey_confirmation_start_date' => ['JourneyConfirmationStartDate', 'journeyConfirmationStartDate'],
         ];
 
-        foreach (range(1, 3) as $segment) {
-            $numberedLastSegmentUsed = $this->customField("Last Segment Used{$segment}")
-                ?? $this->customField("LastSegmentUsed{$segment}");
-
-            if ($numberedLastSegmentUsed !== null) {
-                $attributes["last_segment_used_{$segment}"] = $numberedLastSegmentUsed;
+        foreach ($rootFields as $column => $keys) {
+            if (array_key_exists($column, $attributes)) {
+                continue;
             }
 
-            foreach ($fieldMap as $campaignKey => $databaseKey) {
-                $value = $this->customField($campaignKey.$segment);
+            $value = $this->firstInput(...$keys);
 
-                if ($value !== null) {
-                    $attributes["{$databaseKey}_{$segment}"] = $value;
-                }
+            if (is_scalar($value) && $value !== '') {
+                $attributes[$column] = $value;
             }
         }
 
@@ -188,40 +195,95 @@ class ParentSubscriberRequest extends SubscriberRequest
     }
 
     /**
+     * @return array<int|string, mixed>
+     */
+    private function rawCustomFields(): array
+    {
+        $customFields = $this->firstInput('customFields', 'CustomFields');
+
+        return is_array($customFields) ? $customFields : [];
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $customFields
+     */
+    private function isKeyValueList(array $customFields): bool
+    {
+        if ($customFields === [] || ! array_is_list($customFields)) {
+            return false;
+        }
+
+        $first = $customFields[0] ?? null;
+
+        return is_array($first) && (array_key_exists('Key', $first) || array_key_exists('key', $first));
+    }
+
+    /**
      * @return array<string, mixed>
      */
-    private function campaignCustomFields(): array
+    private function indexedCustomFields(): array
     {
-        $customFields = $this->input('CustomFields', []);
+        $customFields = $this->rawCustomFields();
 
-        if (! is_array($customFields)) {
+        if ($customFields === []) {
             return [];
+        }
+
+        if ($this->isKeyValueList($customFields)) {
+            $indexedFields = [];
+
+            foreach ($customFields as $customField) {
+                if (! is_array($customField)) {
+                    continue;
+                }
+
+                $key = $customField['Key'] ?? $customField['key'] ?? null;
+                $hasValue = array_key_exists('Value', $customField) || array_key_exists('value', $customField);
+
+                if (! is_string($key) || ! $hasValue) {
+                    continue;
+                }
+
+                $indexedFields[$key] = array_key_exists('Value', $customField)
+                    ? $customField['Value']
+                    : $customField['value'];
+            }
+
+            return $indexedFields;
         }
 
         $indexedFields = [];
 
-        foreach ($customFields as $customField) {
-            if (! is_array($customField)) {
+        foreach ($customFields as $key => $value) {
+            if (! is_string($key)) {
                 continue;
             }
 
-            $key = $customField['Key'] ?? null;
-
-            if (! is_string($key) || ! array_key_exists('Value', $customField)) {
-                continue;
-            }
-
-            $indexedFields[$key] = $customField['Value'];
+            $indexedFields[$key] = $value;
         }
 
         return $indexedFields;
     }
 
-    private function customField(string $expectedKey): mixed
+    private function firstInput(string ...$keys): mixed
     {
-        foreach ($this->campaignCustomFields as $key => $value) {
-            if (strcasecmp($key, $expectedKey) === 0) {
-                return $value;
+        $payload = $this->all();
+
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $payload) && $payload[$key] !== null) {
+                return $payload[$key];
+            }
+        }
+
+        foreach ($payload as $payloadKey => $value) {
+            if (! is_string($payloadKey) || $value === null) {
+                continue;
+            }
+
+            foreach ($keys as $key) {
+                if (strcasecmp($payloadKey, $key) === 0) {
+                    return $value;
+                }
             }
         }
 

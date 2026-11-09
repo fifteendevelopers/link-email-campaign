@@ -27,37 +27,34 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
         $dueDate = today($timezone)->toDateString();
 
         foreach ($this->communications() as $communication) {
-            foreach (range(1, 3) as $segment) {
-                $dateColumn = "{$communication['date']}_{$segment}";
-                $sentColumn = "{$communication['sent']}_{$segment}";
+            $dateColumn = $communication['date'];
+            $sentColumn = $communication['sent'];
 
-                ParentSubscriber::query()
-                    ->where("delivery_status_{$segment}", 'active')
-                    ->whereNotNull($dateColumn)
-                    ->whereDate($dateColumn, '<=', $dueDate)
-                    ->whereNull($sentColumn)
-                    ->orderBy('id')
-                    ->chunkById(100, function ($subscribers) use (
-                        $communication,
-                        $emailSender,
-                        $segment,
-                        $sentColumn,
-                    ): void {
-                        foreach ($subscribers as $subscriber) {
-                            $data = $this->templateData($subscriber, $segment);
+            ParentSubscriber::query()
+                ->where('delivery_status', 'active')
+                ->whereNotNull($dateColumn)
+                ->whereDate($dateColumn, '<=', $dueDate)
+                ->whereNull($sentColumn)
+                ->orderBy('id')
+                ->chunkById(100, function ($subscribers) use (
+                    $communication,
+                    $emailSender,
+                    $sentColumn,
+                ): void {
+                    foreach ($subscribers as $subscriber) {
+                        $data = $this->templateData($subscriber);
 
-                            $emailSender->send(
-                                recipient: $subscriber->email_address,
-                                subject: $communication['subject']($data),
-                                template: $communication['template'],
-                                data: $data,
-                                parentSubscriberId: $subscriber->id,
-                            );
+                        $emailSender->send(
+                            recipient: $subscriber->email_address,
+                            subject: $communication['subject']($data),
+                            template: $communication['template'],
+                            data: $data,
+                            parentSubscriberId: $subscriber->id,
+                        );
 
-                            $subscriber->forceFill([$sentColumn => now()])->save();
-                        }
-                    });
-            }
+                        $subscriber->forceFill([$sentColumn => now()])->save();
+                    }
+                });
         }
     }
 
@@ -108,19 +105,17 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
     /**
      * @return array<string, mixed>
      */
-    private function templateData(ParentSubscriber $subscriber, int $segment): array
+    private function templateData(ParentSubscriber $subscriber): array
     {
         return [
-            'childName' => $subscriber->getAttribute("child_name_{$segment}"),
-            'parentName' => $subscriber->getAttribute("parent_name_{$segment}"),
-            'establishmentName' => $subscriber->getAttribute("establishment_name_{$segment}"),
-            'providerName' => $subscriber->getAttribute("provider_name_{$segment}"),
-            'providerPublicEmailAddress' => $subscriber->getAttribute(
-                "provider_public_email_address_{$segment}",
-            ),
-            'outcomesURL' => $subscriber->getAttribute("bikeability_club_link_{$segment}")
+            'childName' => $subscriber->child_name,
+            'parentName' => $subscriber->parent_name,
+            'establishmentName' => $subscriber->establishment_name,
+            'providerName' => $subscriber->provider_name,
+            'providerPublicEmailAddress' => $subscriber->provider_public_email_address,
+            'outcomesURL' => $subscriber->bikeability_club_link
                 ?: config('link.club.base_url', 'https://club.bikeability.org.uk'),
-            'surveyLinkUrl' => $subscriber->getAttribute("survey_link_{$segment}")
+            'surveyLinkUrl' => $subscriber->survey_link
                 ?: config('ridersurvey.base_url', '#'),
         ];
     }

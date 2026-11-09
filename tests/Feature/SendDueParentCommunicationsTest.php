@@ -30,25 +30,25 @@ class SendDueParentCommunicationsTest extends TestCase
 
         $subscriber = ParentSubscriber::create([
             'email_address' => 'parent@example.com',
-            'delivery_status_1' => 'active',
-            'parent_name_1' => 'Jane Parent',
-            'child_name_1' => 'Sam Child',
-            'establishment_name_1' => 'Example School',
-            'provider_name_1' => 'Example Provider',
-            'provider_public_email_address_1' => 'provider@example.com',
-            'journey_confirmation_start_date_1' => '2026-10-20',
-            'cycle_and_helment_check_comms_date_1' => '2026-10-20',
-            'pre_course_faq_comms_date_1' => '2026-10-20',
-            'outcomes_journey_start_date_1' => '2026-10-20',
-            'outcome_survey_comms_date_1' => '2026-10-20',
-            'bikeability_club_link_1' => 'https://club.example.com/report',
-            'survey_link_1' => 'https://survey.example.com/parent',
+            'delivery_status' => 'active',
+            'parent_name' => 'Jane Parent',
+            'child_name' => 'Sam Child',
+            'establishment_name' => 'Example School',
+            'provider_name' => 'Example Provider',
+            'provider_public_email_address' => 'provider@example.com',
+            'journey_confirmation_start_date' => '2026-10-20',
+            'cycle_and_helment_check_comms_date' => '2026-10-20',
+            'pre_course_faq_comms_date' => '2026-10-20',
+            'outcomes_journey_start_date' => '2026-10-20',
+            'outcome_survey_comms_date' => '2026-10-20',
+            'bikeability_club_link' => 'https://club.example.com/report',
+            'survey_link' => 'https://survey.example.com/parent',
         ]);
 
         ParentSubscriber::create([
             'email_address' => 'inactive@example.com',
-            'delivery_status_1' => 'deleted',
-            'journey_confirmation_start_date_1' => '2026-10-20',
+            'delivery_status' => 'deleted',
+            'journey_confirmation_start_date' => '2026-10-20',
         ]);
 
         SendDueParentCommunications::dispatchSync();
@@ -74,11 +74,11 @@ class SendDueParentCommunicationsTest extends TestCase
 
         $subscriber->refresh();
 
-        $this->assertNotNull($subscriber->journey_confirmation_sent_at_1);
-        $this->assertNotNull($subscriber->cycle_and_helment_check_sent_at_1);
-        $this->assertNotNull($subscriber->pre_course_faq_sent_at_1);
-        $this->assertNotNull($subscriber->outcomes_journey_sent_at_1);
-        $this->assertNotNull($subscriber->outcome_survey_sent_at_1);
+        $this->assertNotNull($subscriber->journey_confirmation_sent_at);
+        $this->assertNotNull($subscriber->cycle_and_helment_check_sent_at);
+        $this->assertNotNull($subscriber->pre_course_faq_sent_at);
+        $this->assertNotNull($subscriber->outcomes_journey_sent_at);
+        $this->assertNotNull($subscriber->outcome_survey_sent_at);
         $this->assertDatabaseCount('email_trackings', 5);
 
         SendDueParentCommunications::dispatchSync();

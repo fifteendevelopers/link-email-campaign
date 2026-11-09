@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\MailgunWebhookController;
 use App\Models\EmailTracking;
+use App\Jobs\SendDueParentCommunications;
+use App\Services\CampaignEmailSender;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -121,3 +123,11 @@ Route::get('/school-post-course-booking-confirmation-email', function () {
 Route::get('/school-post-course-booking-confirmation-reminder-email', function () {
     return view('emails.school_comms.booking_confirmation.booking_confirmation_reminder');
 });
+
+/* Route::get('test-send-due-parent-communications', function () {
+    SendDueParentCommunications::dispatch();
+}); */
+
+/* Route::get('/twenty-four-month-later-send-delivery-complete-parent-follow-up-survey-invites', function () {
+    (new SendDueParentCommunications)->handle(new CampaignEmailSender());
+}); */

@@ -12,7 +12,6 @@ use App\Models\ParentSubscriber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ParentSubscriberController extends Controller
@@ -80,19 +79,14 @@ class ParentSubscriberController extends Controller
     {
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
-            'delivery_id' => ['sometimes', 'string', 'max:255'],
+            'delivery_id' => ['sometimes', 'integer', 'min:1'],
         ]);
 
         $query = ParentSubscriber::query()
             ->where('email_address', strtolower($validated['email']))
             ->when(
                 $validated['delivery_id'] ?? null,
-                fn ($builder, string $deliveryId) => $builder->where(
-                    fn ($deliveryQuery) => $deliveryQuery
-                        ->where('delivery_id_1', $deliveryId)
-                        ->orWhere('delivery_id_2', $deliveryId)
-                        ->orWhere('delivery_id_3', $deliveryId),
-                ),
+                fn ($builder, int $deliveryId) => $builder->where('delivery_id', $deliveryId),
             );
 
         $deletedCount = $query->delete();
@@ -203,6 +197,13 @@ class ParentSubscriberController extends Controller
      */
     private function subscriberIdentity(array $attributes): array
     {
+        if (isset($attributes['consent_id'], $attributes['email_address'])) {
+            return [
+                'consent_id' => $attributes['consent_id'],
+                'email_address' => $attributes['email_address'],
+            ];
+        }
+
         if (isset($attributes['consent_id'])) {
             return ['consent_id' => $attributes['consent_id']];
         }
@@ -230,8 +231,8 @@ class ParentSubscriberController extends Controller
     }
 
     /**
-     * Clear delivery markers only when a segment receives a different
-     * communication date, allowing reused segments to send their new emails.
+     * Clear a sent marker when its communication date changes so the new
+     * date can send again.
      *
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
@@ -252,19 +253,15 @@ class ParentSubscriberController extends Controller
             'outcome_survey_comms_date' => 'outcome_survey_sent_at',
         ];
 
-        foreach (range(1, 3) as $segment) {
-            foreach ($communicationColumns as $date => $sentAt) {
-                $dateColumn = "{$date}_{$segment}";
+        foreach ($communicationColumns as $date => $sentAt) {
+            if (! array_key_exists($date, $attributes)) {
+                continue;
+            }
 
-                if (! array_key_exists($dateColumn, $attributes)) {
-                    continue;
-                }
+            $storedDate = $subscriber->getAttribute($date)?->toDateString();
 
-                $storedDate = $subscriber->getAttribute($dateColumn)?->toDateString();
-
-                if ($storedDate !== $attributes[$dateColumn]) {
-                    $attributes["{$sentAt}_{$segment}"] = null;
-                }
+            if ($storedDate !== $attributes[$date]) {
+                $attributes[$sentAt] = null;
             }
         }
 
@@ -273,26 +270,26 @@ class ParentSubscriberController extends Controller
 
     private function updateDeliveryStatuses(ParentSubscriberRequest $request): JsonResponse
     {
-        $statusUpdates = $request->deliveryStatusUpdates();
+        $deliveryStatus = $request->deliveryStatus();
 
-        if ($statusUpdates === []) {
+        if ($deliveryStatus === null) {
             throw ValidationException::withMessages([
-                'CustomFields' => 'At least one deliveryStatus{segment} custom field is required.',
+                'CustomFields' => 'A deliveryStatus custom field is required.',
             ]);
         }
 
         $emailAddress = $request->validated('email_address');
-        $updatedCount = DB::transaction(function () use ($emailAddress, $statusUpdates): int {
-            $attributes = [];
-
-            foreach ($statusUpdates as $segment => $deliveryStatus) {
-                $attributes["delivery_status_{$segment}"] = $deliveryStatus;
-            }
-
-            return ParentSubscriber::query()
-                ->where('email_address', $emailAddress)
-                ->update($attributes);
-        });
+        $updatedCount = ParentSubscriber::query()
+            ->where('email_address', $emailAddress)
+            ->when(
+                $request->validated('consent_id'),
+                fn ($query, $consentId) => $query->where('consent_id', $consentId),
+            )
+            ->when(
+                $request->validated('delivery_id'),
+                fn ($query, $deliveryId) => $query->where('delivery_id', $deliveryId),
+            )
+            ->update(['delivery_status' => $deliveryStatus]);
 
         if ($updatedCount === 0) {
             return response()->json([

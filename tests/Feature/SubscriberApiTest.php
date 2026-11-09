@@ -43,33 +43,56 @@ class SubscriberApiTest extends TestCase
         $payload = [
             'consent_id' => 1001,
             'email_address' => ' Parent@Example.com ',
-            'delivery_id_1' => 1,
-            'parent_name_1' => 'Jane Parent',
-            'child_name_1' => 'Sam Child',
-            'comms_start_date_1' => '2026-10-02',
+            'delivery_id' => 1,
+            'parent_name' => 'Jane Parent',
+            'child_name' => 'Sam Child',
+            'comms_start_date' => '2026-10-02',
             'resubscribe' => true,
         ];
 
         $this->postJson('/api/subscribers/parents', $payload)
             ->assertCreated()
             ->assertJsonPath('data.email_address', 'parent@example.com')
-            ->assertJsonPath('data.comms_start_date_1', '2026-10-02')
-            ->assertJsonPath('data.cycle_and_helment_check_comms_date_1', '2026-10-02')
-            ->assertJsonPath('data.pre_course_faq_comms_date_1', '2026-10-07');
+            ->assertJsonPath('data.comms_start_date', '2026-10-02')
+            ->assertJsonPath('data.cycle_and_helment_check_comms_date', '2026-10-02')
+            ->assertJsonPath('data.pre_course_faq_comms_date', '2026-10-07');
 
         $this->postJson('/api/subscribers/parents', [
             ...$payload,
-            'email_address' => 'new-parent@example.com',
-            'parent_name_1' => 'Janet Parent',
+            'parent_name' => 'Janet Parent',
         ])
             ->assertOk()
-            ->assertJsonPath('data.parent_name_1', 'Janet Parent');
+            ->assertJsonPath('data.parent_name', 'Janet Parent');
 
         $this->assertDatabaseCount('parent_subscribers', 1);
+
+        $this->postJson('/api/subscribers/parents', [
+            ...$payload,
+            'consent_id' => 1002,
+            'child_name' => 'Alex Child',
+        ])->assertCreated();
+
+        $this->postJson('/api/subscribers/parents', [
+            ...$payload,
+            'email_address' => 'second-parent@example.com',
+            'parent_name' => 'Jon Parent',
+        ])->assertCreated();
+
+        $this->assertDatabaseCount('parent_subscribers', 3);
         $this->assertDatabaseHas('parent_subscribers', [
             'consent_id' => 1001,
-            'email_address' => 'new-parent@example.com',
-            'parent_name_1' => 'Janet Parent',
+            'email_address' => 'parent@example.com',
+            'parent_name' => 'Janet Parent',
+        ]);
+        $this->assertDatabaseHas('parent_subscribers', [
+            'consent_id' => 1002,
+            'email_address' => 'parent@example.com',
+            'child_name' => 'Alex Child',
+        ]);
+        $this->assertDatabaseHas('parent_subscribers', [
+            'consent_id' => 1001,
+            'email_address' => 'second-parent@example.com',
+            'parent_name' => 'Jon Parent',
         ]);
     }
 
@@ -79,19 +102,17 @@ class SubscriberApiTest extends TestCase
             'EmailAddress' => ' Parent@Example.com ',
             'Name' => 'Jane Parent',
             'CustomFields' => [
-                ['Key' => 'Segment3', 'Value' => 3],
-                ['Key' => 'DeliveryId3', 'Value' => 3],
-                ['Key' => 'DeliveryStatus3', 'Value' => 'active'],
-                ['Key' => 'ParentName3', 'Value' => 'Jane Parent'],
-                ['Key' => 'ChildName3', 'Value' => 'Sam Child'],
-                ['Key' => 'CourseLevel3', 'Value' => 'Level 2'],
-                ['Key' => 'EstablishmentName3', 'Value' => 'Example School'],
-                ['Key' => 'ProviderName3', 'Value' => 'Example Provider'],
-                ['Key' => 'ProviderPublicEmailAddress3', 'Value' => 'provider@example.com'],
-                ['Key' => 'CommsStartDate3', 'Value' => '2026-10-02'],
-                ['Key' => 'Last Segment Used', 'Value' => 3],
-                ['Key' => 'JourneyConfirmationStartDate3', 'Value' => '2026-10-01'],
-                ['Key' => 'InstructorsDelivery3', 'Value' => 'Simon, Tommy'],
+                ['Key' => 'DeliveryId', 'Value' => 3],
+                ['Key' => 'DeliveryStatus', 'Value' => 'active'],
+                ['Key' => 'ParentName', 'Value' => 'Jane Parent'],
+                ['Key' => 'ChildName', 'Value' => 'Sam Child'],
+                ['Key' => 'CourseLevel', 'Value' => ''],
+                ['Key' => 'EstablishmentName', 'Value' => 'Example School'],
+                ['Key' => 'ProviderName', 'Value' => 'Example Provider'],
+                ['Key' => 'ProviderPublicEmailAddress', 'Value' => 'provider@example.com'],
+                ['Key' => 'CommsStartDate', 'Value' => '2026-10-02'],
+                ['Key' => 'JourneyConfirmationStartDate', 'Value' => '2026-10-01'],
+                ['Key' => 'InstructorsDelivery', 'Value' => 'Simon, Tommy'],
             ],
             'Resubscribe' => true,
             'RestartSubscriptionBasedAutoresponders' => true,
@@ -100,34 +121,130 @@ class SubscriberApiTest extends TestCase
         ])
             ->assertCreated()
             ->assertJsonPath('data.email_address', 'parent@example.com')
-            ->assertJsonPath('data.last_segment_used_3', 3)
-            ->assertJsonPath('data.segment_3', 3);
+            ->assertJsonPath('data.course_level', null);
 
         $this->assertDatabaseHas('parent_subscribers', [
             'email_address' => 'parent@example.com',
-            'segment_3' => 3,
-            'last_segment_used_3' => 3,
-            'delivery_id_3' => 3,
-            'delivery_status_3' => 'active',
-            'instructors_delivery_3' => 'Simon, Tommy',
+            'delivery_id' => 3,
+            'delivery_status' => 'active',
+            'instructors_delivery' => 'Simon, Tommy',
         ]);
     }
 
-    public function test_course_completion_payload_updates_the_matching_segment(): void
+    public function test_campaign_monitor_parent_payload_accepts_an_empty_custom_field_value(): void
+    {
+        $this->postJson('/api/subscribers/parents', [
+            'EmailAddress' => 'freya.walsh.parent@example.com',
+            'Name' => 'Morgan Walsh',
+            'CustomFields' => [
+                ['Key' => 'DeliveryId', 'Value' => 127110],
+                ['Key' => 'DeliveryStatus', 'Value' => 'active'],
+                ['Key' => 'ParentName', 'Value' => 'Morgan Walsh'],
+                ['Key' => 'ChildName', 'Value' => 'Freya'],
+                ['Key' => 'CourseLevel', 'Value' => ''],
+                ['Key' => 'EstablishmentName', 'Value' => 'Ingleton CofE Primary School'],
+                ['Key' => 'ProviderName', 'Value' => 'Durham County Council (TP)'],
+                ['Key' => 'ProviderPublicEmailAddress', 'Value' => 'colin.young@Durham.gov.uk'],
+                ['Key' => 'CommsStartDate', 'Value' => '2026-11-09T10:03:35.000000Z'],
+                ['Key' => 'JourneyConfirmationStartDate', 'Value' => '2026-10-29'],
+                ['Key' => 'InstructorsDelivery', 'Value' => 'Test List : Simon Howarth, Tommy Tucker, Jimmy Ridehard'],
+            ],
+            'Resubscribe' => true,
+            'RestartSubscriptionBasedAutoresponders' => true,
+            'ConsentToTrack' => 'Yes',
+            'ConsentToSendSms' => 'Yes',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.email_address', 'freya.walsh.parent@example.com')
+            ->assertJsonPath('data.name', 'Morgan Walsh')
+            ->assertJsonPath('data.delivery_id', 127110)
+            ->assertJsonPath('data.course_level', null)
+            ->assertJsonPath('data.comms_start_date', '2026-11-09')
+            ->assertJsonPath('data.journey_confirmation_start_date', '2026-10-29')
+            ->assertJsonPath(
+                'data.instructors_delivery',
+                'Test List : Simon Howarth, Tommy Tucker, Jimmy Ridehard',
+            );
+    }
+
+    public function test_parent_object_custom_fields_are_stored(): void
+    {
+        $payload = [
+            'name' => 'Robin Bennett',
+            'email' => 'isla.bennett.parent@example.com',
+            'phoneNumber' => '07700900201',
+            'childName' => 'Isla',
+            'customFields' => [
+                'deliveryId' => 127110,
+                'parentName' => 'Robin Bennett',
+                'childName' => 'Isla',
+                'establishmentName' => 'Ingleton CofE Primary School',
+                'deliveryDate' => '2026-11-23',
+                'commsStartDate' => '2026-11-09T09:32:30.000000Z',
+                'courseLevel' => '',
+                'providerName' => 'Durham County Council (TP)',
+                'providerPublicEmailAddress' => 'colin.young@Durham.gov.uk',
+            ],
+            'JourneyConfirmationStartDate' => '2026-10-29',
+        ];
+
+        $this->postJson('/api/subscribers/parents', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.email_address', 'isla.bennett.parent@example.com')
+            ->assertJsonPath('data.name', 'Robin Bennett')
+            ->assertJsonPath('data.delivery_id', 127110)
+            ->assertJsonPath('data.parent_name', 'Robin Bennett')
+            ->assertJsonPath('data.child_name', 'Isla')
+            ->assertJsonPath('data.establishment_name', 'Ingleton CofE Primary School')
+            ->assertJsonPath('data.course_level', null)
+            ->assertJsonPath('data.provider_name', 'Durham County Council (TP)')
+            ->assertJsonPath('data.provider_public_email_address', 'colin.young@Durham.gov.uk')
+            ->assertJsonPath('data.comms_start_date', '2026-11-09')
+            ->assertJsonPath('data.cycle_and_helment_check_comms_date', '2026-11-09')
+            ->assertJsonPath('data.pre_course_faq_comms_date', '2026-11-14')
+            ->assertJsonPath('data.journey_confirmation_start_date', '2026-10-29');
+
+        $this->assertDatabaseHas('parent_subscribers', [
+            'email_address' => 'isla.bennett.parent@example.com',
+            'delivery_id' => 127110,
+            'journey_confirmation_start_date' => '2026-10-29',
+            'comms_start_date' => '2026-11-09',
+        ]);
+
+        $this->postJson('/api/subscribers/parents', [
+            'email' => 'isla.bennett.parent@example.com',
+            'customFields' => [
+                'childName' => 'Isla Bennett',
+                'parentName' => 'Robin Bennett',
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.child_name', 'Isla Bennett')
+            ->assertJsonPath('data.delivery_id', 127110);
+
+        $this->postJson('/api/subscribers/parents', [
+            'email' => 'another-parent@example.com',
+            'customFields' => [
+                'parentName' => 'Robin Bennett',
+            ],
+        ])->assertCreated()
+            ->assertJsonPath('data.parent_name', 'Robin Bennett');
+    }
+
+    public function test_course_completion_payload_updates_the_subscriber(): void
     {
         ParentSubscriber::create([
             'email_address' => 'parent@example.com',
-            'segment_3' => 'Test Segment',
-            'delivery_id_3' => 'delivery-3',
+            'delivery_id' => 3,
         ]);
 
         $this->postJson('/api/emails/parent/course-completion', [
             'EmailAddress' => 'parent@example.com',
             'Name' => 'Jane Parent',
             'CustomFields' => [
-                ['Key' => 'OutcomesJourneyStartDate3', 'Value' => '2026-10-20'],
-                ['Key' => 'BikeabilityClubLink3', 'Value' => 'https://club.example.com'],
-                ['Key' => 'SurveyLink3', 'Value' => 'https://survey.example.com'],
+                ['Key' => 'OutcomesJourneyStartDate', 'Value' => '2026-10-20'],
+                ['Key' => 'BikeabilityClubLink', 'Value' => 'https://club.example.com'],
+                ['Key' => 'SurveyLink', 'Value' => 'https://survey.example.com'],
             ],
             'Resubscribe' => true,
             'RestartSubscriptionBasedAutoresponders' => true,
@@ -135,33 +252,29 @@ class SubscriberApiTest extends TestCase
             'ConsentToSendSms' => 'Yes',
         ])
             ->assertOk()
-            ->assertJsonPath('data.outcomes_journey_start_date_3', '2026-10-20')
-            ->assertJsonPath('data.outcome_survey_comms_date_3', '2026-10-22')
-            ->assertJsonPath('data.bikeability_club_link_3', 'https://club.example.com');
+            ->assertJsonPath('data.outcomes_journey_start_date', '2026-10-20')
+            ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-22')
+            ->assertJsonPath('data.bikeability_club_link', 'https://club.example.com');
 
         $this->assertDatabaseCount('parent_subscribers', 1);
         $this->assertDatabaseHas('parent_subscribers', [
-            'segment_3' => 'Test Segment',
-            'survey_link_3' => 'https://survey.example.com',
-            'outcome_survey_comms_date_3' => '2026-10-22',
+            'delivery_id' => 3,
+            'survey_link' => 'https://survey.example.com',
+            'outcome_survey_comms_date' => '2026-10-22',
         ]);
     }
 
-    public function test_delivery_status_payload_updates_every_supplied_segment(): void
+    public function test_delivery_status_payload_updates_the_subscriber(): void
     {
         ParentSubscriber::create([
             'email_address' => 'parent@example.com',
-            'segment_1' => 'First segment',
-            'segment_2' => 'Second segment',
-            'delivery_id_1' => 'delivery-1',
-            'delivery_id_2' => 'delivery-2',
+            'delivery_id' => 1,
         ]);
 
         $this->postJson('/api/emails/parent/delivery-deleted', [
             'EmailAddress' => 'parent@example.com',
             'CustomFields' => [
-                ['Key' => 'deliveryStatus1', 'Value' => 'deleted'],
-                ['Key' => 'deliveryStatus2', 'Value' => 'deleted'],
+                ['Key' => 'deliveryStatus', 'Value' => 'deleted'],
             ],
             'Resubscribe' => true,
             'RestartSubscriptionBasedAutoresponders' => true,
@@ -174,53 +287,52 @@ class SubscriberApiTest extends TestCase
         $this->assertDatabaseCount('parent_subscribers', 1);
         $this->assertDatabaseHas('parent_subscribers', [
             'email_address' => 'parent@example.com',
-            'delivery_status_1' => 'deleted',
-            'delivery_status_2' => 'deleted',
+            'delivery_status' => 'deleted',
         ]);
     }
 
-    public function test_reused_parent_segment_resets_only_changed_communication_markers(): void
+    public function test_changed_parent_communication_dates_reset_sent_markers(): void
     {
         $subscriber = ParentSubscriber::create([
             'email_address' => 'parent@example.com',
-            'comms_start_date_1' => '2026-10-02',
-            'cycle_and_helment_check_comms_date_1' => '2026-10-02',
-            'pre_course_faq_comms_date_1' => '2026-10-07',
-            'cycle_and_helment_check_sent_at_1' => '2026-10-02 08:00:00',
-            'pre_course_faq_sent_at_1' => '2026-10-07 08:00:00',
+            'comms_start_date' => '2026-10-02',
+            'cycle_and_helment_check_comms_date' => '2026-10-02',
+            'pre_course_faq_comms_date' => '2026-10-07',
+            'cycle_and_helment_check_sent_at' => '2026-10-02 08:00:00',
+            'pre_course_faq_sent_at' => '2026-10-07 08:00:00',
         ]);
 
         $this->patchJson("/api/subscribers/parents/{$subscriber->id}", [
-            'comms_start_date_1' => '2026-10-02',
+            'comms_start_date' => '2026-10-02',
         ])->assertOk();
 
         $subscriber->refresh();
-        $this->assertNotNull($subscriber->cycle_and_helment_check_sent_at_1);
-        $this->assertNotNull($subscriber->pre_course_faq_sent_at_1);
+        $this->assertNotNull($subscriber->cycle_and_helment_check_sent_at);
+        $this->assertNotNull($subscriber->pre_course_faq_sent_at);
 
         $this->patchJson("/api/subscribers/parents/{$subscriber->id}", [
-            'comms_start_date_1' => '2026-11-01',
+            'comms_start_date' => '2026-11-01',
         ])
             ->assertOk()
-            ->assertJsonPath('data.cycle_and_helment_check_comms_date_1', '2026-11-01')
-            ->assertJsonPath('data.pre_course_faq_comms_date_1', '2026-11-06');
+            ->assertJsonPath('data.cycle_and_helment_check_comms_date', '2026-11-01')
+            ->assertJsonPath('data.pre_course_faq_comms_date', '2026-11-06');
 
         $subscriber->refresh();
-        $this->assertNull($subscriber->cycle_and_helment_check_sent_at_1);
-        $this->assertNull($subscriber->pre_course_faq_sent_at_1);
+        $this->assertNull($subscriber->cycle_and_helment_check_sent_at);
+        $this->assertNull($subscriber->pre_course_faq_sent_at);
     }
 
     public function test_parent_subscribers_can_be_filtered_updated_and_deleted(): void
     {
         $subscriber = ParentSubscriber::create([
             'email_address' => 'parent@example.com',
-            'delivery_id_1' => 'delivery-1',
-            'parent_name_1' => 'Jane Parent',
+            'delivery_id' => 1,
+            'parent_name' => 'Jane Parent',
         ]);
 
         ParentSubscriber::create([
             'email_address' => 'other@example.com',
-            'delivery_id_2' => 'delivery-2',
+            'delivery_id' => 2,
         ]);
 
         $this->getJson('/api/subscribers/parents?email=parent@example.com')
@@ -228,12 +340,12 @@ class SubscriberApiTest extends TestCase
             ->assertJsonPath('id', $subscriber->id);
 
         $this->patchJson("/api/subscribers/parents/{$subscriber->id}", [
-            'delivery_status_1' => 'completed',
+            'delivery_status' => 'completed',
         ])
             ->assertOk()
-            ->assertJsonPath('data.delivery_status_1', 'completed');
+            ->assertJsonPath('data.delivery_status', 'completed');
 
-        $this->deleteJson('/api/subscribers/parents?email=parent@example.com&delivery_id=delivery-1')
+        $this->deleteJson('/api/subscribers/parents?email=parent@example.com&delivery_id=1')
             ->assertOk()
             ->assertJsonPath('deleted_count', 1);
 
@@ -246,26 +358,26 @@ class SubscriberApiTest extends TestCase
         $response = $this->postJson('/api/subscribers/schools', [
             'consent_id' => 2001,
             'email_address' => 'school@example.com',
-            'delivery_id_1' => 10,
-            'first_name_1' => 'Alex',
-            'establishment_name_1' => 'Example School',
-            'booking_link_1' => 'https://example.com/bookings/10',
-            'delivery_start_date_1' => '2026-11-10',
+            'delivery_id' => 10,
+            'first_name' => 'Alex',
+            'establishment_name' => 'Example School',
+            'booking_link' => 'https://example.com/bookings/10',
+            'delivery_start_date' => '2026-11-10',
         ])
             ->assertCreated()
-            ->assertJsonPath('data.delivery_start_date_1', '2026-11-10');
+            ->assertJsonPath('data.delivery_start_date', '2026-11-10');
 
         $subscriberId = $response->json('data.id');
 
-        $this->getJson("/api/subscribers/schools/{$subscriberId}")
+        $this->getJson('/api/subscribers/schools?email=school@example.com')
             ->assertOk()
-            ->assertJsonPath('data.establishment_name_1', 'Example School');
+            ->assertJsonPath('establishment_name', 'Example School');
 
         $this->patchJson("/api/subscribers/schools/{$subscriberId}", [
-            'first_name_1' => 'Alexa',
+            'first_name' => 'Alexa',
         ])
             ->assertOk()
-            ->assertJsonPath('data.first_name_1', 'Alexa');
+            ->assertJsonPath('data.first_name', 'Alexa');
 
         $this->deleteJson("/api/subscribers/schools/{$subscriberId}")
             ->assertNoContent();
@@ -279,18 +391,16 @@ class SubscriberApiTest extends TestCase
             'EmailAddress' => ' School@Example.com ',
             'Name' => 'Example School',
             'CustomFields' => [
-                ['Key' => 'Segment2', 'Value' => 2],
-                ['Key' => 'Last Segment Used', 'Value' => 2],
-                ['Key' => 'DeliveryId2', 'Value' => 10],
-                ['Key' => 'DeliveryStatus2', 'Value' => 'active'],
-                ['Key' => 'DeliveryStartDate2', 'Value' => '2026-11-10'],
-                ['Key' => 'CourseCommsStartDate2', 'Value' => '2026-10-20'],
-                ['Key' => 'FirstName2', 'Value' => 'Alex'],
-                ['Key' => 'ProviderName2', 'Value' => 'Cycle Provider'],
-                ['Key' => 'ProviderContactEmailAddress2', 'Value' => 'provider@example.com'],
-                ['Key' => 'BookingLink2', 'Value' => 'https://example.com/bookings/10'],
-                ['Key' => 'EstablishmentName2', 'Value' => 'Example School'],
-                ['Key' => 'JourneyConfirmationStartDate2', 'Value' => '2026-10-15'],
+                ['Key' => 'DeliveryId', 'Value' => 10],
+                ['Key' => 'DeliveryStatus', 'Value' => 'active'],
+                ['Key' => 'DeliveryStartDate', 'Value' => '2026-11-10'],
+                ['Key' => 'CourseCommsStartDate', 'Value' => '2026-10-20'],
+                ['Key' => 'FirstName', 'Value' => 'Alex'],
+                ['Key' => 'ProviderName', 'Value' => 'Cycle Provider'],
+                ['Key' => 'ProviderContactEmailAddress', 'Value' => 'provider@example.com'],
+                ['Key' => 'BookingLink', 'Value' => 'https://example.com/bookings/10'],
+                ['Key' => 'EstablishmentName', 'Value' => 'Example School'],
+                ['Key' => 'JourneyConfirmationStartDate', 'Value' => '2026-10-15'],
             ],
             'Resubscribe' => true,
             'RestartSubscriptionBasedAutoresponders' => true,
@@ -301,29 +411,25 @@ class SubscriberApiTest extends TestCase
         $this->postJson('/api/emails/school/booking-completed', $payload)
             ->assertCreated()
             ->assertJsonPath('data.email_address', 'school@example.com')
-            ->assertJsonPath('data.last_segment_used_2', 2)
-            ->assertJsonPath('data.segment_2', 2)
-            ->assertJsonPath('data.delivery_id_2', 10)
-            ->assertJsonPath('data.delivery_start_date_2', '2026-11-10')
-            ->assertJsonPath('data.journey_confirmation_start_date_2', '2026-10-15')
-            ->assertJsonPath('data.pre_course_consent_check_comms_date_2', '2026-10-20')
-            ->assertJsonPath('data.outstanding_consent_check_comms_date_2', '2026-10-27')
-            ->assertJsonPath('data.final_consent_reminder_comms_date_2', '2026-10-31');
+            ->assertJsonPath('data.delivery_id', 10)
+            ->assertJsonPath('data.delivery_start_date', '2026-11-10')
+            ->assertJsonPath('data.journey_confirmation_start_date', '2026-10-15')
+            ->assertJsonPath('data.pre_course_consent_check_comms_date', '2026-10-20')
+            ->assertJsonPath('data.outstanding_consent_check_comms_date', '2026-10-27')
+            ->assertJsonPath('data.final_consent_reminder_comms_date', '2026-10-31');
 
         $this->assertDatabaseHas('school_subscribers', [
             'email_address' => 'school@example.com',
-            'segment_2' => 2,
-            'last_segment_used_2' => 2,
-            'delivery_id_2' => 10,
-            'first_name_2' => 'Alex',
-            'provider_contact_email_address_2' => 'provider@example.com',
-            'delivery_status_2' => 'active',
+            'delivery_id' => 10,
+            'first_name' => 'Alex',
+            'provider_contact_email_address' => 'provider@example.com',
+            'delivery_status' => 'active',
         ]);
 
         $this->postJson('/api/emails/school/delivery-deleted', [
             'EmailAddress' => 'school@example.com',
             'CustomFields' => [
-                ['Key' => 'deliveryStatus2', 'Value' => 'deleted'],
+                ['Key' => 'deliveryStatus', 'Value' => 'deleted'],
             ],
             'Resubscribe' => true,
             'RestartSubscriptionBasedAutoresponders' => true,
@@ -335,7 +441,7 @@ class SubscriberApiTest extends TestCase
 
         $this->assertSame(
             'deleted',
-            SchoolSubscriber::query()->where('email_address', 'school@example.com')->value('delivery_status_2'),
+            SchoolSubscriber::query()->where('email_address', 'school@example.com')->value('delivery_status'),
         );
     }
 

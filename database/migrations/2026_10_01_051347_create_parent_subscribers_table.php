@@ -14,39 +14,31 @@ return new class extends Migration
             $table->string('email_address')->index();
             $table->string('name')->nullable();
 
-            $addSegmentedColumns = static function (callable $addColumn): void {
-                foreach (range(1, 3) as $segment) {
-                    $addColumn($segment);
-                }
-            };
+            $table->unsignedBigInteger('delivery_id')->nullable();
+            $table->string('delivery_status')->default('active');
+            $table->string('parent_name')->nullable();
+            $table->string('child_name')->nullable();
+            $table->string('course_level')->nullable();
+            $table->string('establishment_name')->nullable();
+            $table->string('provider_name')->nullable();
+            $table->string('provider_public_email_address')->nullable();
+            $table->text('instructors_delivery')->nullable();
 
-            $addSegmentedColumns(fn (int $segment) => $table->unsignedBigInteger("segment_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->unsignedBigInteger("last_segment_used_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->unsignedBigInteger("delivery_id_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("delivery_status_{$segment}")->default('active'));
-            $addSegmentedColumns(fn (int $segment) => $table->string("parent_name_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("child_name_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("course_level_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("establishment_name_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("provider_name_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("provider_public_email_address_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->text("instructors_delivery_{$segment}")->nullable());
+            $table->date('journey_confirmation_start_date')->nullable()->index('parent_journey_date_idx'); // Send Consent Confirmation Email
+            $table->timestamp('journey_confirmation_sent_at')->nullable();
 
-            $addSegmentedColumns(fn (int $segment) => $table->date("journey_confirmation_start_date_{$segment}")->nullable()->index("parent_journey_date_{$segment}_idx")); // Send Consent Confirmation Email
-            $addSegmentedColumns(fn (int $segment) => $table->timestamp("journey_confirmation_sent_at_{$segment}")->nullable());
+            $table->date('comms_start_date')->nullable();
+            $table->date('cycle_and_helment_check_comms_date')->nullable()->index('parent_cycle_check_date_idx'); // Send 'Pre Course - how_to_get_ready_for_bikeability' Email
+            $table->timestamp('cycle_and_helment_check_sent_at')->nullable();
+            $table->date('pre_course_faq_comms_date')->nullable()->index('parent_faq_date_idx'); // 5 days after Cycle and Helmet Check Email - Send 'Pre Course - FAQ' Email
+            $table->timestamp('pre_course_faq_sent_at')->nullable();
 
-            $addSegmentedColumns(fn (int $segment) => $table->date("comms_start_date_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->date("cycle_and_helment_check_comms_date_{$segment}")->nullable()->index("parent_cycle_check_date_{$segment}_idx")); // Send 'Pre Course - how_to_get_ready_for_bikeability' Email
-            $addSegmentedColumns(fn (int $segment) => $table->timestamp("cycle_and_helment_check_sent_at_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->date("pre_course_faq_comms_date_{$segment}")->nullable()->index("parent_faq_date_{$segment}_idx")); // 5 days after Cycle and Helmet Check Email - Send 'Pre Course - FAQ' Email
-            $addSegmentedColumns(fn (int $segment) => $table->timestamp("pre_course_faq_sent_at_{$segment}")->nullable());
-
-            $addSegmentedColumns(fn (int $segment) => $table->date("outcomes_journey_start_date_{$segment}")->nullable()->index("parent_outcome_date_{$segment}_idx")); // Send Outcome Email - 'Rider Report' Email
-            $addSegmentedColumns(fn (int $segment) => $table->timestamp("outcomes_journey_sent_at_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->date("outcome_survey_comms_date_{$segment}")->nullable()->index("parent_survey_date_{$segment}_idx")); // 2 days after Outcome Email - Send Parent Survey Email
-            $addSegmentedColumns(fn (int $segment) => $table->timestamp("outcome_survey_sent_at_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("bikeability_club_link_{$segment}")->nullable());
-            $addSegmentedColumns(fn (int $segment) => $table->string("survey_link_{$segment}")->nullable());
+            $table->date('outcomes_journey_start_date')->nullable()->index('parent_outcome_date_idx'); // Send Outcome Email - 'Rider Report' Email
+            $table->timestamp('outcomes_journey_sent_at')->nullable();
+            $table->date('outcome_survey_comms_date')->nullable()->index('parent_survey_date_idx'); // 2 days after Outcome Email - Send Parent Survey Email
+            $table->timestamp('outcome_survey_sent_at')->nullable();
+            $table->string('bikeability_club_link')->nullable();
+            $table->string('survey_link')->nullable();
 
             $table->boolean('resubscribe')->default(true);
             $table->boolean('restart_subscription_based_autoresponders')->default(true);
