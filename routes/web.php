@@ -1,9 +1,9 @@
 <?php
 
 use App\Http\Controllers\MailgunWebhookController;
-use App\Models\EmailTracking;
 use App\Jobs\SendDueParentCommunications;
-use App\Services\CampaignEmailSender;
+use App\Jobs\SendDueSchoolCommunications;
+use App\Models\EmailTracking;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -124,10 +124,32 @@ Route::get('/school-post-course-booking-confirmation-reminder-email', function (
     return view('emails.school_comms.booking_confirmation.booking_confirmation_reminder');
 });
 
-/* Route::get('test-send-due-parent-communications', function () {
-    SendDueParentCommunications::dispatch();
-}); */
+Route::get('test-send-due-parent-communications', function () {
+    try {
+        SendDueParentCommunications::dispatchSync();
+    } catch (\Throwable $exception) {
+        return response()->json([
+            'message' => 'Parent communication job failed. See storage/logs/parent-subscription.log.',
+            'error' => $exception->getMessage(),
+        ], 500);
+    }
 
-/* Route::get('/twenty-four-month-later-send-delivery-complete-parent-follow-up-survey-invites', function () {
-    (new SendDueParentCommunications)->handle(new CampaignEmailSender());
-}); */
+    return response()->json([
+        'message' => 'Parent communication job finished. See storage/logs/parent-subscription.log.',
+    ]);
+});
+
+Route::get('test-send-due-school-communications', function () {
+    try {
+        SendDueSchoolCommunications::dispatchSync();
+    } catch (\Throwable $exception) {
+        return response()->json([
+            'message' => 'School communication job failed. See storage/logs/school-subscription.log.',
+            'error' => $exception->getMessage(),
+        ], 500);
+    }
+
+    return response()->json([
+        'message' => 'School communication job finished. See storage/logs/school-subscription.log.',
+    ]);
+});

@@ -356,7 +356,6 @@ class SubscriberApiTest extends TestCase
     public function test_school_subscriber_crud_endpoints(): void
     {
         $response = $this->postJson('/api/subscribers/schools', [
-            'consent_id' => 2001,
             'email_address' => 'school@example.com',
             'delivery_id' => 10,
             'first_name' => 'Alex',
@@ -443,6 +442,88 @@ class SubscriberApiTest extends TestCase
             'deleted',
             SchoolSubscriber::query()->where('email_address', 'school@example.com')->value('delivery_status'),
         );
+    }
+
+    public function test_school_subscriber_is_matched_by_email_and_delivery_id(): void
+    {
+        $payload = [
+            'EmailAddress' => 'school@example.com',
+            'Name' => 'Example School',
+            'CustomFields' => [
+                ['Key' => 'DeliveryId', 'Value' => 10],
+                ['Key' => 'DeliveryStatus', 'Value' => 'active'],
+                ['Key' => 'FirstName', 'Value' => 'Alex'],
+                ['Key' => 'EstablishmentName', 'Value' => 'Example School'],
+            ],
+            'Resubscribe' => true,
+            'RestartSubscriptionBasedAutoresponders' => true,
+            'ConsentToTrack' => 'Yes',
+            'ConsentToSendSms' => 'Yes',
+        ];
+
+        $this->postJson('/api/subscribers/schools', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.email_address', 'school@example.com')
+            ->assertJsonPath('data.delivery_id', 10)
+            ->assertJsonPath('data.first_name', 'Alex');
+
+        $payload['CustomFields'][2]['Value'] = 'Alexa';
+
+        $this->postJson('/api/subscribers/schools', $payload)
+            ->assertOk()
+            ->assertJsonPath('data.first_name', 'Alexa')
+            ->assertJsonPath('data.delivery_id', 10);
+
+        $payload['CustomFields'][0]['Value'] = 11;
+        $payload['CustomFields'][2]['Value'] = 'Sam';
+
+        $this->postJson('/api/subscribers/schools', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.delivery_id', 11)
+            ->assertJsonPath('data.first_name', 'Sam');
+
+        $this->assertDatabaseCount('school_subscribers', 2);
+        $this->assertDatabaseHas('school_subscribers', [
+            'email_address' => 'school@example.com',
+            'delivery_id' => 10,
+            'first_name' => 'Alexa',
+        ]);
+        $this->assertDatabaseHas('school_subscribers', [
+            'email_address' => 'school@example.com',
+            'delivery_id' => 11,
+            'first_name' => 'Sam',
+        ]);
+
+        $this->getJson('/api/subscribers/schools?email=school@example.com&delivery_id=11')
+            ->assertOk()
+            ->assertJsonPath('delivery_id', 11)
+            ->assertJsonPath('first_name', 'Sam');
+
+        $this->postJson('/api/emails/school/delivery-deleted', [
+            'EmailAddress' => 'school@example.com',
+            'delivery_id' => 11,
+            'CustomFields' => [
+                ['Key' => 'deliveryStatus', 'Value' => 'deleted'],
+                ['Key' => 'DeliveryId', 'Value' => 11],
+            ],
+            'Resubscribe' => true,
+            'RestartSubscriptionBasedAutoresponders' => true,
+            'ConsentToTrack' => 'Yes',
+            'ConsentToSendSms' => 'Yes',
+        ])
+            ->assertOk()
+            ->assertJsonPath('updated_count', 1);
+
+        $this->assertDatabaseHas('school_subscribers', [
+            'email_address' => 'school@example.com',
+            'delivery_id' => 10,
+            'delivery_status' => 'active',
+        ]);
+        $this->assertDatabaseHas('school_subscribers', [
+            'email_address' => 'school@example.com',
+            'delivery_id' => 11,
+            'delivery_status' => 'deleted',
+        ]);
     }
 
     public function test_subscriber_payload_is_validated(): void

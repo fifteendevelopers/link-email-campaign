@@ -24,6 +24,7 @@ class SchoolSubscriberController extends Controller
         $validated = $request->validate([
             'email' => ['sometimes', 'email', 'max:255'],
             'email_address' => ['sometimes', 'email', 'max:255'],
+            'delivery_id' => ['sometimes', 'integer', 'min:1'],
         ]);
 
         $emailAddress = $validated['email_address'] ?? $validated['email'] ?? null;
@@ -32,6 +33,10 @@ class SchoolSubscriberController extends Controller
             ->when(
                 $emailAddress,
                 fn ($query, string $email) => $query->where('email_address', strtolower($email)),
+            )
+            ->when(
+                $validated['delivery_id'] ?? null,
+                fn ($query, int $deliveryId) => $query->where('delivery_id', $deliveryId),
             )
             ->first();
 
@@ -213,18 +218,15 @@ class SchoolSubscriberController extends Controller
      */
     private function subscriberIdentity(array $attributes): array
     {
-        if (isset($attributes['delivery_id'], $attributes['email_address'])) {
-            return [
-                'delivery_id' => $attributes['delivery_id'],
-                'email_address' => $attributes['email_address'],
-            ];
+        $identity = [
+            'email_address' => $attributes['email_address'],
+        ];
+
+        if (isset($attributes['delivery_id'])) {
+            $identity['delivery_id'] = $attributes['delivery_id'];
         }
 
-        if (isset($attributes['consent_id'])) {
-            return ['consent_id' => $attributes['consent_id']];
-        }
-
-        return ['email_address' => $attributes['email_address']];
+        return $identity;
     }
 
     private function persistSubscriber(SchoolSubscriberRequest $request): JsonResponse

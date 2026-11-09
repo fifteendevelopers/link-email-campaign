@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 class SchoolSubscriber extends Model
 {
     protected $fillable = [
-        'consent_id',
         'email_address',
         'name',
         'delivery_id',
@@ -38,7 +37,6 @@ class SchoolSubscriber extends Model
     protected function casts(): array
     {
         return [
-            'consent_id' => 'integer',
             'delivery_id' => 'integer',
             'delivery_start_date' => 'date:Y-m-d',
             'course_comms_start_date' => 'date:Y-m-d',

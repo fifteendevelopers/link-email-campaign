@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('school_subscribers', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('consent_id')->nullable();
             $table->string('email_address')->index();
             $table->string('name')->nullable();
 
