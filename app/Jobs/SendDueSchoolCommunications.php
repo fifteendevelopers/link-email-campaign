@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Models\SchoolSubscriber;
 use App\Services\CampaignEmailSender;
+use App\Support\SubscriberCommunications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -71,7 +72,7 @@ class SendDueSchoolCommunications implements ShouldBeUnique, ShouldQueue
                         $this->log('info', 'Sending school communication.', $context);
 
                         try {
-                            $data = $this->templateData($subscriber);
+                            $data = SubscriberCommunications::templateData($subscriber);
                             $subject = $communication['subject']($data);
                             $tracking = $emailSender->send(
                                 recipient: $subscriber->email_address,
@@ -79,6 +80,7 @@ class SendDueSchoolCommunications implements ShouldBeUnique, ShouldQueue
                                 template: $communication['template'],
                                 data: $data,
                                 schoolSubscriberId: $subscriber->id,
+                                sentColumn: $sentColumn,
                             );
 
                             $sentAt = now();
@@ -123,46 +125,7 @@ class SendDueSchoolCommunications implements ShouldBeUnique, ShouldQueue
      */
     private function communications(): array
     {
-        return [
-            [
-                'date' => 'journey_confirmation_start_date',
-                'sent' => 'journey_confirmation_sent_at',
-                'template' => 'emails.school_comms.booking_confirmation.booking_confirmation',
-                'subject' => static fn (array $data): string => "Booking confirmation: Bikeability cycle training at {$data['establishmentName']}",
-            ],
-            [
-                'date' => 'pre_course_consent_check_comms_date',
-                'sent' => 'pre_course_consent_check_sent_at',
-                'template' => 'emails.school_comms.pre_course.consent_check',
-                'subject' => static fn (array $data): string => "Upcoming Bikeability - action required! Complete consent checks and finalise numbers for {$data['establishmentName']}",
-            ],
-            [
-                'date' => 'outstanding_consent_check_comms_date',
-                'sent' => 'outstanding_consent_check_sent_at',
-                'template' => 'emails.school_comms.pre_course.consent_check_outstanding',
-                'subject' => static fn (array $data): string => "Check your outstanding Bikeability consents for {$data['establishmentName']}",
-            ],
-            [
-                'date' => 'final_consent_reminder_comms_date',
-                'sent' => 'final_consent_reminder_sent_at',
-                'template' => 'emails.school_comms.pre_course.consent_check_final_reminder',
-                'subject' => static fn (array $data): string => "Final reminder: Are you ready for Bikeability at {$data['establishmentName']}?",
-            ],
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function templateData(SchoolSubscriber $subscriber): array
-    {
-        return [
-            'firstName' => $subscriber->first_name,
-            'establishmentName' => $subscriber->establishment_name,
-            'providerName' => $subscriber->provider_name,
-            'providerContactEmail' => $subscriber->provider_contact_email_address,
-            'bookingLink' => $subscriber->booking_link,
-        ];
+        return SubscriberCommunications::forAudience('schools')['communications'];
     }
 
     private function logSelection(string $dateColumn, string $sentColumn, string $template, string $dueDate): void

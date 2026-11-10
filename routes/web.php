@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MailgunWebhookController;
+use App\Http\Controllers\SubscriberListController;
 use App\Jobs\SendDueParentCommunications;
 use App\Jobs\SendDueSchoolCommunications;
 use App\Models\EmailTracking;
@@ -10,8 +11,44 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('subscribers.parents');
 });
+
+Route::get('/parent-subscribers', [SubscriberListController::class, 'parents'])
+    ->name('subscribers.parents');
+
+Route::get('/school-subscribers', [SubscriberListController::class, 'schools'])
+    ->name('subscribers.schools');
+
+Route::get('/subscribers/{audience}/rows', [SubscriberListController::class, 'rows'])
+    ->where('audience', 'parents|schools')
+    ->name('subscribers.rows');
+
+Route::patch('/subscribers/{audience}/{subscriber}/status', [SubscriberListController::class, 'updateStatus'])
+    ->where('audience', 'parents|schools')
+    ->whereNumber('subscriber')
+    ->name('subscribers.status');
+
+Route::patch('/subscribers/{audience}/{subscriber}/send-date', [SubscriberListController::class, 'updateSendDate'])
+    ->where('audience', 'parents|schools')
+    ->whereNumber('subscriber')
+    ->name('subscribers.send-date');
+
+Route::post('/subscribers/{audience}/send-due', [SubscriberListController::class, 'sendDue'])
+    ->where('audience', 'parents|schools')
+    ->name('subscribers.send-due');
+
+Route::post('/subscribers/{audience}/{subscriber}/emails/{sentColumn}', [SubscriberListController::class, 'sendOne'])
+    ->where('audience', 'parents|schools')
+    ->whereNumber('subscriber')
+    ->where('sentColumn', '[A-Za-z0-9_]+')
+    ->name('subscribers.send-one');
+
+Route::get('/subscribers/{audience}/{subscriber}/emails/{sentColumn}', [SubscriberListController::class, 'email'])
+    ->where('audience', 'parents|schools')
+    ->whereNumber('subscriber')
+    ->where('sentColumn', '[A-Za-z0-9_]+')
+    ->name('subscribers.email');
 
 Route::post('/mailgun/webhook', [MailgunWebhookController::class, 'webhook'])
     ->name('mailgun.webhook');
@@ -127,7 +164,7 @@ Route::get('/school-post-course-booking-confirmation-reminder-email', function (
 Route::get('test-send-due-parent-communications', function () {
     try {
         SendDueParentCommunications::dispatchSync();
-    } catch (\Throwable $exception) {
+    } catch (Throwable $exception) {
         return response()->json([
             'message' => 'Parent communication job failed. See storage/logs/parent-subscription.log.',
             'error' => $exception->getMessage(),
@@ -142,7 +179,7 @@ Route::get('test-send-due-parent-communications', function () {
 Route::get('test-send-due-school-communications', function () {
     try {
         SendDueSchoolCommunications::dispatchSync();
-    } catch (\Throwable $exception) {
+    } catch (Throwable $exception) {
         return response()->json([
             'message' => 'School communication job failed. See storage/logs/school-subscription.log.',
             'error' => $exception->getMessage(),

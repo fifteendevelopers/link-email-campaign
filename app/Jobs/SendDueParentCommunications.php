@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Models\ParentSubscriber;
 use App\Services\CampaignEmailSender;
+use App\Support\SubscriberCommunications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -71,7 +72,7 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
                         $this->log('info', 'Sending parent communication.', $context);
 
                         try {
-                            $data = $this->templateData($subscriber);
+                            $data = SubscriberCommunications::templateData($subscriber);
                             $subject = $communication['subject']($data);
                             $tracking = $emailSender->send(
                                 recipient: $subscriber->email_address,
@@ -79,6 +80,7 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
                                 template: $communication['template'],
                                 data: $data,
                                 parentSubscriberId: $subscriber->id,
+                                sentColumn: $sentColumn,
                             );
 
                             $sentAt = now();
@@ -123,56 +125,7 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
      */
     private function communications(): array
     {
-        return [
-            [
-                'date' => 'journey_confirmation_start_date',
-                'sent' => 'journey_confirmation_sent_at',
-                'template' => 'emails.parent_comms.consent_confirmation.confirmation',
-                'subject' => static fn (array $data): string => "We've received {$data['childName']}'s Bikeability consent form",
-            ],
-            [
-                'date' => 'cycle_and_helment_check_comms_date',
-                'sent' => 'cycle_and_helment_check_sent_at',
-                'template' => 'emails.parent_comms.pre_course.how_to_get_ready_for_bikeability',
-                'subject' => static fn (array $data): string => 'How to get ready for Bikeability',
-            ],
-            [
-                'date' => 'pre_course_faq_comms_date',
-                'sent' => 'pre_course_faq_sent_at',
-                'template' => 'emails.parent_comms.pre_course.faq',
-                'subject' => static fn (array $data): string => 'Frequently Asked Questions, answered',
-            ],
-            [
-                'date' => 'outcomes_journey_start_date',
-                'sent' => 'outcomes_journey_sent_at',
-                'template' => 'emails.parent_comms.post_course.rider_report',
-                'subject' => static fn (array $data): string => "{$data['childName']} did it!",
-            ],
-            [
-                'date' => 'outcome_survey_comms_date',
-                'sent' => 'outcome_survey_sent_at',
-                'template' => 'emails.parent_comms.post_course.parent_survey',
-                'subject' => static fn (array $data): string => 'Please share your views',
-            ],
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function templateData(ParentSubscriber $subscriber): array
-    {
-        return [
-            'childName' => $subscriber->child_name,
-            'parentName' => $subscriber->parent_name,
-            'establishmentName' => $subscriber->establishment_name,
-            'providerName' => $subscriber->provider_name,
-            'providerPublicEmailAddress' => $subscriber->provider_public_email_address,
-            'outcomesURL' => $subscriber->bikeability_club_link
-                ?: config('link.club.base_url', 'https://club.bikeability.org.uk'),
-            'surveyLinkUrl' => $subscriber->survey_link
-                ?: config('ridersurvey.base_url', '#'),
-        ];
+        return SubscriberCommunications::forAudience('parents')['communications'];
     }
 
     private function logSelection(string $dateColumn, string $sentColumn, string $template, string $dueDate): void
