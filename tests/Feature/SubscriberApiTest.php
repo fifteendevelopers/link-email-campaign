@@ -54,7 +54,7 @@ class SubscriberApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.email_address', 'parent@example.com')
             ->assertJsonPath('data.comms_start_date', '2026-10-02')
-            ->assertJsonPath('data.cycle_and_helment_check_comms_date', '2026-10-02')
+            ->assertJsonPath('data.cycle_and_helmet_check_comms_date', '2026-10-02')
             ->assertJsonPath('data.pre_course_faq_comms_date', '2026-10-07');
 
         $this->postJson('/api/subscribers/parents', [
@@ -200,7 +200,7 @@ class SubscriberApiTest extends TestCase
             ->assertJsonPath('data.provider_name', 'Durham County Council (TP)')
             ->assertJsonPath('data.provider_public_email_address', 'colin.young@Durham.gov.uk')
             ->assertJsonPath('data.comms_start_date', '2026-11-09')
-            ->assertJsonPath('data.cycle_and_helment_check_comms_date', '2026-11-09')
+            ->assertJsonPath('data.cycle_and_helmet_check_comms_date', '2026-11-09')
             ->assertJsonPath('data.pre_course_faq_comms_date', '2026-11-14')
             ->assertJsonPath('data.journey_confirmation_start_date', '2026-10-29');
 
@@ -296,9 +296,9 @@ class SubscriberApiTest extends TestCase
         $subscriber = ParentSubscriber::create([
             'email_address' => 'parent@example.com',
             'comms_start_date' => '2026-10-02',
-            'cycle_and_helment_check_comms_date' => '2026-10-02',
+            'cycle_and_helmet_check_comms_date' => '2026-10-02',
             'pre_course_faq_comms_date' => '2026-10-07',
-            'cycle_and_helment_check_sent_at' => '2026-10-02 08:00:00',
+            'cycle_and_helmet_check_sent_at' => '2026-10-02 08:00:00',
             'pre_course_faq_sent_at' => '2026-10-07 08:00:00',
         ]);
 
@@ -307,18 +307,18 @@ class SubscriberApiTest extends TestCase
         ])->assertOk();
 
         $subscriber->refresh();
-        $this->assertNotNull($subscriber->cycle_and_helment_check_sent_at);
+        $this->assertNotNull($subscriber->cycle_and_helmet_check_sent_at);
         $this->assertNotNull($subscriber->pre_course_faq_sent_at);
 
         $this->patchJson("/api/subscribers/parents/{$subscriber->id}", [
             'comms_start_date' => '2026-11-01',
         ])
             ->assertOk()
-            ->assertJsonPath('data.cycle_and_helment_check_comms_date', '2026-11-01')
+            ->assertJsonPath('data.cycle_and_helmet_check_comms_date', '2026-11-01')
             ->assertJsonPath('data.pre_course_faq_comms_date', '2026-11-06');
 
         $subscriber->refresh();
-        $this->assertNull($subscriber->cycle_and_helment_check_sent_at);
+        $this->assertNull($subscriber->cycle_and_helmet_check_sent_at);
         $this->assertNull($subscriber->pre_course_faq_sent_at);
     }
 

@@ -247,7 +247,7 @@ class ParentSubscriberController extends Controller
 
         $communicationColumns = [
             'journey_confirmation_start_date' => 'journey_confirmation_sent_at',
-            'cycle_and_helment_check_comms_date' => 'cycle_and_helment_check_sent_at',
+            'cycle_and_helmet_check_comms_date' => 'cycle_and_helmet_check_sent_at',
             'pre_course_faq_comms_date' => 'pre_course_faq_sent_at',
             'outcomes_journey_start_date' => 'outcomes_journey_sent_at',
             'outcome_survey_comms_date' => 'outcome_survey_sent_at',

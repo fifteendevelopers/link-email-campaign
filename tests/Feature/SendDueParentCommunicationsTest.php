@@ -37,7 +37,7 @@ class SendDueParentCommunicationsTest extends TestCase
             'provider_name' => 'Example Provider',
             'provider_public_email_address' => 'provider@example.com',
             'journey_confirmation_start_date' => '2026-10-20',
-            'cycle_and_helment_check_comms_date' => '2026-10-20',
+            'cycle_and_helmet_check_comms_date' => '2026-10-20',
             'pre_course_faq_comms_date' => '2026-10-20',
             'outcomes_journey_start_date' => '2026-10-20',
             'outcome_survey_comms_date' => '2026-10-20',
@@ -75,7 +75,7 @@ class SendDueParentCommunicationsTest extends TestCase
         $subscriber->refresh();
 
         $this->assertNotNull($subscriber->journey_confirmation_sent_at);
-        $this->assertNotNull($subscriber->cycle_and_helment_check_sent_at);
+        $this->assertNotNull($subscriber->cycle_and_helmet_check_sent_at);
         $this->assertNotNull($subscriber->pre_course_faq_sent_at);
         $this->assertNotNull($subscriber->outcomes_journey_sent_at);
         $this->assertNotNull($subscriber->outcome_survey_sent_at);

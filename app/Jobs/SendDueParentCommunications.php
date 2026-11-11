@@ -207,7 +207,7 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
     {
         return in_array($sentColumn, [
             'journey_confirmation_sent_at',
-            'cycle_and_helment_check_sent_at',
+            'cycle_and_helmet_check_sent_at',
             'pre_course_faq_sent_at',
             'outcomes_journey_sent_at',
             'outcome_survey_sent_at',

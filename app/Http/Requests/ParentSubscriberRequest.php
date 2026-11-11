@@ -27,7 +27,7 @@ class ParentSubscriberRequest extends SubscriberRequest
             'provider_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'provider_public_email_address' => ['sometimes', 'nullable', 'email', 'max:255'],
             'comms_start_date' => ['sometimes', 'nullable', 'date'],
-            'cycle_and_helment_check_comms_date' => ['sometimes', 'nullable', 'date'],
+            'cycle_and_helmet_check_comms_date' => ['sometimes', 'nullable', 'date'],
             'pre_course_faq_comms_date' => ['sometimes', 'nullable', 'date'],
             'instructors_delivery' => ['sometimes', 'nullable', 'string'],
             'outcomes_journey_start_date' => ['sometimes', 'nullable', 'date'],
@@ -50,7 +50,7 @@ class ParentSubscriberRequest extends SubscriberRequest
         foreach ([
             'journey_confirmation_start_date',
             'comms_start_date',
-            'cycle_and_helment_check_comms_date',
+            'cycle_and_helmet_check_comms_date',
             'pre_course_faq_comms_date',
             'outcomes_journey_start_date',
             'outcome_survey_comms_date',
@@ -62,7 +62,7 @@ class ParentSubscriberRequest extends SubscriberRequest
 
         if (array_key_exists('comms_start_date', $attributes)) {
             $date = $this->dateValue($attributes['comms_start_date']);
-            $attributes['cycle_and_helment_check_comms_date'] = $date?->toDateString();
+            $attributes['cycle_and_helmet_check_comms_date'] = $date?->toDateString();
             $attributes['pre_course_faq_comms_date'] = $date?->addDays(5)->toDateString();
         }
 
@@ -158,7 +158,8 @@ class ParentSubscriberRequest extends SubscriberRequest
             'providername' => 'provider_name',
             'providerpublicemailaddress' => 'provider_public_email_address',
             'commsstartdate' => 'comms_start_date',
-            'cycleandhelmentcheckcommsdate' => 'cycle_and_helment_check_comms_date',
+            'cycleandhelmetcheckcommsdate' => 'cycle_and_helmet_check_comms_date',
+            'cycleandhelmentcheckcommsdate' => 'cycle_and_helmet_check_comms_date',
             'precoursefaqcommsdate' => 'pre_course_faq_comms_date',
             'journeyconfirmationstartdate' => 'journey_confirmation_start_date',
             'instructorsdelivery' => 'instructors_delivery',

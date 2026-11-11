@@ -28,8 +28,8 @@ return new class extends Migration
             $table->timestamp('journey_confirmation_sent_at')->nullable();
 
             $table->date('comms_start_date')->nullable();
-            $table->date('cycle_and_helment_check_comms_date')->nullable()->index('parent_cycle_check_date_idx'); // Send 'Pre Course - how_to_get_ready_for_bikeability' Email
-            $table->timestamp('cycle_and_helment_check_sent_at')->nullable();
+            $table->date('cycle_and_helmet_check_comms_date')->nullable()->index('parent_cycle_check_date_idx'); // Send 'Pre Course - how_to_get_ready_for_bikeability' Email
+            $table->timestamp('cycle_and_helmet_check_sent_at')->nullable();
             $table->date('pre_course_faq_comms_date')->nullable()->index('parent_faq_date_idx'); // 5 days after Cycle and Helmet Check Email - Send 'Pre Course - FAQ' Email
             $table->timestamp('pre_course_faq_sent_at')->nullable();
 

@@ -41,8 +41,8 @@ final class SubscriberCommunications
                         'subject' => static fn (array $data): string => "We've received {$data['childName']}'s Bikeability consent form",
                     ],
                     [
-                        'date' => 'cycle_and_helment_check_comms_date',
-                        'sent' => 'cycle_and_helment_check_sent_at',
+                        'date' => 'cycle_and_helmet_check_comms_date',
+                        'sent' => 'cycle_and_helmet_check_sent_at',
                         'label' => 'Cycle and helmet check',
                         'template' => 'emails.parent_comms.pre_course.how_to_get_ready_for_bikeability',
                         'subject' => static fn (array $data): string => 'How to get ready for Bikeability',
