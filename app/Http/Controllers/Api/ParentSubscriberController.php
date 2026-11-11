@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ParentSubscriberRequest;
 use App\Http\Requests\SendParentEmailRequest;
 use App\Models\ParentSubscriber;
+use App\Support\SubscriberCommunications;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -57,7 +58,7 @@ class ParentSubscriberController extends Controller
         ParentSubscriberRequest $request,
         ParentSubscriber $parentSubscriber,
     ): JsonResponse {
-        $parentSubscriber->update($this->resetChangedCommunicationDates(
+        $parentSubscriber->update($this->attributesForSave(
             $request->subscriberAttributes(),
             $parentSubscriber,
         ));
@@ -219,7 +220,7 @@ class ParentSubscriberController extends Controller
 
         $subscriber = ParentSubscriber::query()->updateOrCreate(
             $identity,
-            $this->resetChangedCommunicationDates($attributes, $existingSubscriber),
+            $this->attributesForSave($attributes, $existingSubscriber),
         );
 
         return response()->json([
@@ -228,6 +229,112 @@ class ParentSubscriberController extends Controller
                 : 'Parent subscriber updated successfully.',
             'data' => $subscriber->fresh(),
         ], $subscriber->wasRecentlyCreated ? Response::HTTP_CREATED : Response::HTTP_OK);
+    }
+
+    /**
+     * Store each rider-report start date, derive the survey date, then clear sent markers whose dates changed.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function attributesForSave(array $attributes, ?ParentSubscriber $subscriber): array
+    {
+        $courseLevel = array_key_exists('course_level', $attributes)
+            ? (is_scalar($attributes['course_level']) ? (string) $attributes['course_level'] : null)
+            : $subscriber?->course_level;
+
+        $attributes = $this->fillMissingRiderStartDates($attributes, $subscriber, $courseLevel);
+
+        return $this->resetChangedCommunicationDates(
+            SubscriberCommunications::scheduleOutcomeDates($attributes, $courseLevel, $subscriber),
+            $subscriber,
+        );
+    }
+
+    /**
+     * When a course becomes combined after one rider-report date was stored,
+     * copy that date onto the level that does not have one yet.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function fillMissingRiderStartDates(
+        array $attributes,
+        ?ParentSubscriber $subscriber,
+        ?string $courseLevel,
+    ): array {
+        if (
+            $subscriber === null
+            || ! array_key_exists('course_level', $attributes)
+            || array_key_exists('outcomes_journey_start_date', $attributes)
+            || array_key_exists('outcomes_journey_level_1_start_date', $attributes)
+            || array_key_exists('outcomes_journey_level_2_start_date', $attributes)
+            || ! SubscriberCommunications::isCombinedCourse($courseLevel)
+        ) {
+            return $this->fillSingleRiderStartDate($attributes, $subscriber, $courseLevel);
+        }
+
+        $knownDate = $subscriber->outcomes_journey_start_date?->toDateString();
+
+        foreach (['1', '2'] as $level) {
+            $storedDate = $subscriber->getAttribute(SubscriberCommunications::riderStartColumn($level));
+
+            if ($storedDate !== null) {
+                $knownDate = $storedDate->toDateString();
+                break;
+            }
+        }
+
+        if ($knownDate === null) {
+            return $attributes;
+        }
+
+        foreach (['1', '2'] as $level) {
+            $column = SubscriberCommunications::riderStartColumn($level);
+
+            if (array_key_exists($column, $attributes) || $subscriber->getAttribute($column) !== null) {
+                continue;
+            }
+
+            $attributes[$column] = $knownDate;
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * When a course stops being combined, keep its rider report on the single date column.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function fillSingleRiderStartDate(
+        array $attributes,
+        ?ParentSubscriber $subscriber,
+        ?string $courseLevel,
+    ): array {
+        if (
+            $subscriber === null
+            || ! array_key_exists('course_level', $attributes)
+            || SubscriberCommunications::isCombinedCourse($courseLevel)
+            || array_key_exists('outcomes_journey_start_date', $attributes)
+            || $subscriber->outcomes_journey_start_date !== null
+        ) {
+            return $attributes;
+        }
+
+        foreach (SubscriberCommunications::includedLevels($courseLevel) as $level) {
+            $storedDate = $subscriber->getAttribute(SubscriberCommunications::riderStartColumn($level));
+
+            if ($storedDate === null) {
+                continue;
+            }
+
+            $attributes['outcomes_journey_start_date'] = $storedDate->toDateString();
+            break;
+        }
+
+        return $attributes;
     }
 
     /**
@@ -246,21 +353,27 @@ class ParentSubscriberController extends Controller
         }
 
         $communicationColumns = [
-            'journey_confirmation_start_date' => 'journey_confirmation_sent_at',
-            'cycle_and_helmet_check_comms_date' => 'cycle_and_helmet_check_sent_at',
-            'pre_course_faq_comms_date' => 'pre_course_faq_sent_at',
-            'outcomes_journey_start_date' => 'outcomes_journey_sent_at',
-            'outcome_survey_comms_date' => 'outcome_survey_sent_at',
+            'journey_confirmation_start_date' => ['journey_confirmation_sent_at'],
+            'cycle_and_helmet_check_comms_date' => ['cycle_and_helmet_check_sent_at'],
+            'pre_course_faq_comms_date' => ['pre_course_faq_sent_at'],
+            'outcomes_journey_start_date' => ['outcomes_journey_sent_at'],
+            'outcomes_journey_level_1_start_date' => ['outcomes_journey_level_1_sent_at'],
+            'outcomes_journey_level_2_start_date' => ['outcomes_journey_level_2_sent_at'],
+            'outcome_survey_comms_date' => ['outcome_survey_sent_at'],
         ];
 
-        foreach ($communicationColumns as $date => $sentAt) {
+        foreach ($communicationColumns as $date => $sentColumns) {
             if (! array_key_exists($date, $attributes)) {
                 continue;
             }
 
             $storedDate = $subscriber->getAttribute($date)?->toDateString();
 
-            if ($storedDate !== $attributes[$date]) {
+            if ($storedDate === $attributes[$date]) {
+                continue;
+            }
+
+            foreach ($sentColumns as $sentAt) {
                 $attributes[$sentAt] = null;
             }
         }

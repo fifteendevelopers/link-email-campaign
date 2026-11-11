@@ -80,7 +80,11 @@ class SubscriberListTest extends TestCase
             ->assertSee('Send date')
             ->assertSee('value="20/10/2026"', false)
             ->assertSee('has not been sent')
-            ->assertSee('Send Consent confirmation email', false);
+            ->assertSee('Send Consent confirmation email', false)
+            ->assertSee('data-sent-column="outcomes_journey_sent_at"', false)
+            ->assertDontSee('data-sent-column="outcomes_journey_level_1_sent_at"', false)
+            ->assertDontSee('data-sent-column="outcomes_journey_level_2_sent_at"', false)
+            ->assertDontSee('>Level 1<', false);
 
         $this->get(route('subscribers.rows', 'schools'))
             ->assertOk()
@@ -347,5 +351,37 @@ class SubscriberListTest extends TestCase
         $this->patchJson(route('subscribers.status', ['audience' => 'schools', 'subscriber' => $school->id]), [
             'status' => 'consent removed',
         ])->assertUnprocessable();
+    }
+
+    public function test_combined_course_rider_report_has_separate_level_buttons(): void
+    {
+        ParentSubscriber::create([
+            'email_address' => 'combined@example.com',
+            'child_name' => 'Sam Child',
+            'course_level' => 'Level 1 & 2 Combined',
+            'delivery_status' => 'active',
+            'outcomes_journey_level_1_start_date' => '2026-10-20',
+            'outcomes_journey_level_2_start_date' => '2026-10-21',
+            'outcome_survey_comms_date' => '2026-10-23',
+        ]);
+
+        $this->get(route('subscribers.rows', 'parents'))
+            ->assertOk()
+            ->assertSee('Course: Level 1 &amp; 2 Combined', false)
+            ->assertSee('data-column="outcomes_journey_level_1_start_date"', false)
+            ->assertSee('data-column="outcomes_journey_level_2_start_date"', false)
+            ->assertSee('data-column="outcome_survey_comms_date"', false)
+            ->assertDontSee('outcome_survey_comms_level_', false)
+            ->assertSee('data-sent-column="outcomes_journey_level_1_sent_at"', false)
+            ->assertSee('data-sent-column="outcomes_journey_level_2_sent_at"', false)
+            ->assertDontSee('data-sent-column="outcomes_journey_sent_at"', false)
+            ->assertDontSee('data-column="outcomes_journey_start_date"', false)
+            ->assertSee('data-sent-column="outcome_survey_sent_at"', false)
+            ->assertSee('Send Rider report Level 1 email', false)
+            ->assertSee('Send Rider report Level 2 email', false)
+            ->assertSee('Send Parent survey email', false)
+            ->assertDontSee('Send Parent survey Level', false)
+            ->assertSee('>Level 1<', false)
+            ->assertSee('>Level 2<', false);
     }
 }

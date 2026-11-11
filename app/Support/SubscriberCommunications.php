@@ -8,6 +8,7 @@ use App\Jobs\SendDueParentCommunications;
 use App\Jobs\SendDueSchoolCommunications;
 use App\Models\ParentSubscriber;
 use App\Models\SchoolSubscriber;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
 
@@ -20,7 +21,14 @@ final class SubscriberCommunications
      *     model: class-string<ParentSubscriber|SchoolSubscriber>,
      *     job: class-string<SendDueParentCommunications|SendDueSchoolCommunications>,
      *     subscriberKey: string,
-     *     communications: list<array{date: string, sent: string, label: string, template: string, subject: callable(array<string, mixed>): string}>
+     *     communications: list<array{
+     *         date: string,
+     *         sent: string,
+     *         label: string,
+     *         template: string,
+     *         subject: callable(array<string, mixed>): string,
+     *         levels?: list<array{key: string, label: string, date: string, sent: string}>
+     *     }>
      * }
      */
     public static function forAudience(string $audience): array
@@ -60,6 +68,20 @@ final class SubscriberCommunications
                         'label' => 'Rider report',
                         'template' => 'emails.parent_comms.post_course.rider_report',
                         'subject' => static fn (array $data): string => "{$data['childName']} did it!",
+                        'levels' => [
+                            [
+                                'key' => '1',
+                                'label' => 'Level 1',
+                                'date' => 'outcomes_journey_level_1_start_date',
+                                'sent' => 'outcomes_journey_level_1_sent_at',
+                            ],
+                            [
+                                'key' => '2',
+                                'label' => 'Level 2',
+                                'date' => 'outcomes_journey_level_2_start_date',
+                                'sent' => 'outcomes_journey_level_2_sent_at',
+                            ],
+                        ],
                     ],
                     [
                         'date' => 'outcome_survey_comms_date',
@@ -112,11 +134,221 @@ final class SubscriberCommunications
     }
 
     /**
+     * Level keys that should receive outcome emails for this course.
+     * A combined Level 1 and Level 2 course receives both.
+     *
+     * @return list<'1'|'2'>
+     */
+    public static function includedLevels(?string $courseLevel): array
+    {
+        $normalized = strtolower(trim((string) preg_replace('/\s+/', ' ', (string) $courseLevel)));
+
+        if (in_array($normalized, ['level 1 & 2 combined', 'level 1 and 2 combined'], true)) {
+            return ['1', '2'];
+        }
+
+        if (str_contains($normalized, 'level 2') && ! str_contains($normalized, 'level 1')) {
+            return ['2'];
+        }
+
+        return ['1'];
+    }
+
+    public static function isCombinedCourse(?string $courseLevel): bool
+    {
+        return self::includedLevels($courseLevel) === ['1', '2'];
+    }
+
+    /**
+     * One send definition per email. Combined courses send a Level 1 and a
+     * Level 2 rider report. Every other course uses the single rider report.
+     *
+     * @return list<array{
+     *     date: string,
+     *     sent: string,
+     *     label: string,
+     *     template: string,
+     *     subject: callable(array<string, mixed>): string,
+     *     level?: string,
+     *     forCombined?: bool
+     * }>
+     */
+    public static function sendable(string $audience): array
+    {
+        $sends = [];
+
+        foreach (self::forAudience($audience)['communications'] as $communication) {
+            $levels = $communication['levels'] ?? null;
+
+            if ($levels === null) {
+                $sends[] = $communication;
+
+                continue;
+            }
+
+            $sends[] = [
+                'date' => $communication['date'],
+                'sent' => $communication['sent'],
+                'label' => $communication['label'],
+                'template' => $communication['template'],
+                'subject' => $communication['subject'],
+                'forCombined' => false,
+            ];
+
+            foreach ($levels as $level) {
+                $sends[] = [
+                    'date' => $level['date'],
+                    'sent' => $level['sent'],
+                    'label' => $communication['label'].' '.$level['label'],
+                    'template' => $communication['template'],
+                    'subject' => $communication['subject'],
+                    'level' => $level['key'],
+                    'forCombined' => true,
+                ];
+            }
+        }
+
+        return $sends;
+    }
+
+    /**
+     * Controls to show in one subscriber-list cell.
+     *
+     * @param  array{date: string, sent: string, label: string, levels?: list<array{key: string, label: string, date: string, sent: string}>}  $communication
+     * @return list<array{date: string, sent: string, label: string, levelLabel: string|null}>
+     */
+    public static function tracksFor(ParentSubscriber|SchoolSubscriber $subscriber, array $communication): array
+    {
+        $levels = $communication['levels'] ?? null;
+        $singleTrack = [[
+            'date' => $communication['date'],
+            'sent' => $communication['sent'],
+            'label' => $communication['label'],
+            'levelLabel' => null,
+        ]];
+
+        if ($levels === null || ! $subscriber instanceof ParentSubscriber || ! self::isCombinedCourse($subscriber->course_level)) {
+            return $singleTrack;
+        }
+
+        $included = self::includedLevels($subscriber->course_level);
+        $showLevelLabels = count($included) > 1;
+        $tracks = [];
+
+        foreach ($levels as $level) {
+            if (! in_array($level['key'], $included, true)) {
+                continue;
+            }
+
+            $tracks[] = [
+                'date' => $level['date'],
+                'sent' => $level['sent'],
+                'label' => $showLevelLabels
+                    ? $communication['label'].' '.$level['label']
+                    : $communication['label'],
+                'levelLabel' => $showLevelLabels ? $level['label'] : null,
+            ];
+        }
+
+        return $tracks;
+    }
+
+    /**
+     * Combined courses keep a rider-report date for each level. Every other course
+     * keeps one rider-report date. The parent survey is two days after the latest date.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    public static function scheduleOutcomeDates(
+        array $attributes,
+        ?string $courseLevel,
+        ?ParentSubscriber $subscriber = null,
+    ): array {
+        $combined = self::isCombinedCourse($courseLevel);
+        $startWasUpdated = array_key_exists('outcomes_journey_start_date', $attributes)
+            || self::hasRiderStartDate($attributes);
+
+        if ($combined && array_key_exists('outcomes_journey_start_date', $attributes)) {
+            foreach (self::includedLevels($courseLevel) as $level) {
+                $column = self::riderStartColumn($level);
+
+                if (! array_key_exists($column, $attributes)) {
+                    $attributes[$column] = $attributes['outcomes_journey_start_date'];
+                }
+            }
+        }
+
+        if ($combined && $startWasUpdated) {
+            $attributes['outcomes_journey_start_date'] = null;
+        }
+
+        if (! $combined && array_key_exists('outcomes_journey_start_date', $attributes)) {
+            $attributes['outcomes_journey_level_1_start_date'] = null;
+            $attributes['outcomes_journey_level_2_start_date'] = null;
+        }
+
+        if (! $startWasUpdated) {
+            return $attributes;
+        }
+
+        $latest = $combined
+            ? self::latestRiderStartDate($attributes, $subscriber, ['1', '2'])
+            : (array_key_exists('outcomes_journey_start_date', $attributes)
+                ? $attributes['outcomes_journey_start_date']
+                : $subscriber?->outcomes_journey_start_date?->toDateString());
+
+        $attributes['outcome_survey_comms_date'] = self::surveyDate($latest);
+
+        return $attributes;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  list<string>  $levels
+     */
+    private static function latestRiderStartDate(array $attributes, ?ParentSubscriber $subscriber, array $levels): ?string
+    {
+        $latest = null;
+
+        foreach ($levels as $level) {
+            $column = self::riderStartColumn($level);
+            $value = array_key_exists($column, $attributes)
+                ? $attributes[$column]
+                : $subscriber?->getAttribute($column)?->toDateString();
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            if ($latest === null || $value > $latest) {
+                $latest = $value;
+            }
+        }
+
+        return $latest;
+    }
+
+    public static function riderStartColumn(string $level): string
+    {
+        return 'outcomes_journey_level_'.$level.'_start_date';
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private static function hasRiderStartDate(array $attributes): bool
+    {
+        return array_key_exists('outcomes_journey_level_1_start_date', $attributes)
+            || array_key_exists('outcomes_journey_level_2_start_date', $attributes);
+    }
+
+    /**
      * @return list<string>
      */
     public static function dateColumns(string $audience): array
     {
-        return array_column(self::forAudience($audience)['communications'], 'date');
+        return array_values(array_unique(array_column(self::sendable($audience), 'date')));
     }
 
     /**
@@ -124,7 +356,7 @@ final class SubscriberCommunications
      */
     public static function sentColumns(string $audience): array
     {
-        return array_column(self::forAudience($audience)['communications'], 'sent');
+        return array_values(array_unique(array_column(self::sendable($audience), 'sent')));
     }
 
     /**
@@ -149,13 +381,22 @@ final class SubscriberCommunications
      */
     public static function findBySentColumn(string $audience, string $sentColumn): ?array
     {
-        foreach (self::forAudience($audience)['communications'] as $communication) {
+        foreach (self::sendable($audience) as $communication) {
             if ($communication['sent'] === $sentColumn) {
                 return $communication;
             }
         }
 
         return null;
+    }
+
+    private static function surveyDate(mixed $startDate): ?string
+    {
+        if ($startDate === null || $startDate === '') {
+            return null;
+        }
+
+        return CarbonImmutable::parse((string) $startDate)->addDays(2)->toDateString();
     }
 
     /**

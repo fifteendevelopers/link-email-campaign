@@ -38,8 +38,10 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
         foreach ($this->communications() as $communication) {
             $dateColumn = $communication['date'];
             $sentColumn = $communication['sent'];
+            $level = $communication['level'] ?? null;
+            $forCombined = $communication['forCombined'] ?? null;
 
-            $this->logSelection($dateColumn, $sentColumn, $communication['template'], $dueDate);
+            $this->logSelection($dateColumn, $sentColumn, $communication['template'], $dueDate, $level, $forCombined);
 
             ParentSubscriber::query()
                 ->where('delivery_status', 'active')
@@ -53,10 +55,12 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
                     $dateColumn,
                     $sentColumn,
                     $dueDate,
+                    $level,
+                    $forCombined,
                     &$failures,
                 ): void {
                     foreach ($subscribers as $subscriber) {
-                        if ($this->alreadySent($subscriber, $sentColumn)) {
+                        if ($this->alreadySent($subscriber, $sentColumn) || $this->courseExcludesSend($subscriber, $level, $forCombined)) {
                             continue;
                         }
 
@@ -120,15 +124,16 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
      *     date: string,
      *     sent: string,
      *     template: string,
-     *     subject: callable(array<string, mixed>): string
+     *     subject: callable(array<string, mixed>): string,
+     *     level?: string
      * }>
      */
     private function communications(): array
     {
-        return SubscriberCommunications::forAudience('parents')['communications'];
+        return SubscriberCommunications::sendable('parents');
     }
 
-    private function logSelection(string $dateColumn, string $sentColumn, string $template, string $dueDate): void
+    private function logSelection(string $dateColumn, string $sentColumn, string $template, string $dueDate, ?string $level, ?bool $forCombined): void
     {
         $selectedIds = [];
 
@@ -139,12 +144,12 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
                 fn ($query) => $query->whereNull($sentColumn),
             )
             ->orderBy('id')
-            ->each(function (ParentSubscriber $subscriber) use ($dateColumn, $sentColumn, $template, $dueDate, &$selectedIds): void {
+            ->each(function (ParentSubscriber $subscriber) use ($dateColumn, $sentColumn, $template, $dueDate, $level, $forCombined, &$selectedIds): void {
                 if ($this->alreadySent($subscriber, $sentColumn)) {
                     return;
                 }
 
-                $reason = $this->skipReason($subscriber, $dateColumn, $sentColumn, $dueDate);
+                $reason = $this->skipReason($subscriber, $dateColumn, $sentColumn, $dueDate, $level, $forCombined);
 
                 if ($reason === null) {
                     $selectedIds[] = $subscriber->id;
@@ -179,7 +184,15 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
         string $dateColumn,
         string $sentColumn,
         string $dueDate,
+        ?string $level,
+        ?bool $forCombined,
     ): ?string {
+        if ($this->courseExcludesSend($subscriber, $level, $forCombined)) {
+            return $forCombined === true
+                ? 'course is not combined'
+                : 'course level does not include this rider report';
+        }
+
         if ($subscriber->delivery_status !== 'active') {
             return 'delivery status is '.$subscriber->delivery_status;
         }
@@ -203,15 +216,28 @@ class SendDueParentCommunications implements ShouldBeUnique, ShouldQueue
             && $subscriber->getAttribute($sentColumn) !== null;
     }
 
+    private function courseExcludesSend(ParentSubscriber $subscriber, ?string $level, ?bool $forCombined): bool
+    {
+        $combined = SubscriberCommunications::isCombinedCourse($subscriber->course_level);
+
+        if ($forCombined === true && ! $combined) {
+            return true;
+        }
+
+        if ($forCombined === false && $combined) {
+            return true;
+        }
+
+        if ($level === null || $level === '') {
+            return false;
+        }
+
+        return ! in_array($level, SubscriberCommunications::includedLevels($subscriber->course_level), true);
+    }
+
     private function ignoresSentColumn(string $sentColumn): bool
     {
-        return in_array($sentColumn, [
-            'journey_confirmation_sent_at',
-            'cycle_and_helmet_check_sent_at',
-            'pre_course_faq_sent_at',
-            'outcomes_journey_sent_at',
-            'outcome_survey_sent_at',
-        ], true);
+        return in_array($sentColumn, SubscriberCommunications::sentColumns('parents'), true);
     }
 
     /**

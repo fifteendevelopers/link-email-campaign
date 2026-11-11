@@ -35,6 +35,10 @@ return new class extends Migration
 
             $table->date('outcomes_journey_start_date')->nullable()->index('parent_outcome_date_idx'); // Send Outcome Email - 'Rider Report' Email
             $table->timestamp('outcomes_journey_sent_at')->nullable();
+            $table->date('outcomes_journey_level_1_start_date')->nullable()->index('parent_outcome_l1_date_idx');
+            $table->timestamp('outcomes_journey_level_1_sent_at')->nullable();
+            $table->date('outcomes_journey_level_2_start_date')->nullable()->index('parent_outcome_l2_date_idx');
+            $table->timestamp('outcomes_journey_level_2_sent_at')->nullable();
             $table->date('outcome_survey_comms_date')->nullable()->index('parent_survey_date_idx'); // 2 days after Outcome Email - Send Parent Survey Email
             $table->timestamp('outcome_survey_sent_at')->nullable();
             $table->string('bikeability_club_link')->nullable();

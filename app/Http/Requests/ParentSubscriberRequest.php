@@ -31,6 +31,8 @@ class ParentSubscriberRequest extends SubscriberRequest
             'pre_course_faq_comms_date' => ['sometimes', 'nullable', 'date'],
             'instructors_delivery' => ['sometimes', 'nullable', 'string'],
             'outcomes_journey_start_date' => ['sometimes', 'nullable', 'date'],
+            'outcomes_journey_level_1_start_date' => ['sometimes', 'nullable', 'date'],
+            'outcomes_journey_level_2_start_date' => ['sometimes', 'nullable', 'date'],
             'outcome_survey_comms_date' => ['sometimes', 'nullable', 'date'],
             'bikeability_club_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
             'survey_link' => ['sometimes', 'nullable', 'url', 'max:2048'],
@@ -53,6 +55,8 @@ class ParentSubscriberRequest extends SubscriberRequest
             'cycle_and_helmet_check_comms_date',
             'pre_course_faq_comms_date',
             'outcomes_journey_start_date',
+            'outcomes_journey_level_1_start_date',
+            'outcomes_journey_level_2_start_date',
             'outcome_survey_comms_date',
         ] as $dateField) {
             if (array_key_exists($dateField, $attributes)) {
@@ -64,11 +68,6 @@ class ParentSubscriberRequest extends SubscriberRequest
             $date = $this->dateValue($attributes['comms_start_date']);
             $attributes['cycle_and_helmet_check_comms_date'] = $date?->toDateString();
             $attributes['pre_course_faq_comms_date'] = $date?->addDays(5)->toDateString();
-        }
-
-        if (array_key_exists('outcomes_journey_start_date', $attributes)) {
-            $date = $this->dateValue($attributes['outcomes_journey_start_date']);
-            $attributes['outcome_survey_comms_date'] = $date?->addDays(2)->toDateString();
         }
 
         return $attributes;
@@ -164,6 +163,9 @@ class ParentSubscriberRequest extends SubscriberRequest
             'journeyconfirmationstartdate' => 'journey_confirmation_start_date',
             'instructorsdelivery' => 'instructors_delivery',
             'outcomesjourneystartdate' => 'outcomes_journey_start_date',
+            'outcomesjourneylevel1startdate' => 'outcomes_journey_level_1_start_date',
+            'outcomesjourneylevel2startdate' => 'outcomes_journey_level_2_start_date',
+            'outcomesurveycommsdate' => 'outcome_survey_comms_date',
             'bikeabilityclublink' => 'bikeability_club_link',
             'surveylink' => 'survey_link',
         ];
