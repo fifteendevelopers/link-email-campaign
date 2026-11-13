@@ -27,6 +27,7 @@ class SendParentEmailRequest extends FormRequest
             'provider_public_email_address' => ['required', 'email'],
             'outcomes_url' => ['sometimes', 'url'],
             'survey_link_url' => ['sometimes', 'url'],
+            'outcome_survey_course_level' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 
@@ -54,6 +55,10 @@ class SendParentEmailRequest extends FormRequest
 
         if (isset($validated['survey_link_url'])) {
             $data['surveyLinkUrl'] = $validated['survey_link_url'];
+        }
+
+        if (isset($validated['outcome_survey_course_level'])) {
+            $data['outcomeSurveyCourseLevel'] = $validated['outcome_survey_course_level'];
         }
 
         return $data;

@@ -6,7 +6,13 @@
         'providerName' => 'Anytown Cycling Club',
         'providerPublicEmailAddress' => 'info@anytowncyclingclub.org',
         'surveyLinkUrl' => config('ridersurvey.base_url', '#'),
+        'outcomeSurveyCourseLevel' => null,
     ], $data ?? []);
+
+    $courseLevel = trim((string) ($data['outcomeSurveyCourseLevel'] ?? ''));
+    $completedCourse = $courseLevel === ''
+        ? 'a Bikeability cycle training course'
+        : 'a Bikeability '.$courseLevel.' cycle training course';
 @endphp
 
 <!doctype html>
@@ -86,7 +92,7 @@
 </head>
 <body style="background-color:#fffffe;margin:0;padding:0;width:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
     <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
-        {{ $data['childName'] }} recently completed a Bikeability cycle training course. Please share your views.
+        {{ $data['childName'] }} recently completed {{ $completedCourse }}. Please share your views.
     </div>
 
     <center style="background-color:#fffffe;width:100%;">
@@ -121,7 +127,7 @@
                                     <tr>
                                         <td bgcolor="#ffffff" style="background-color:#ffffff;padding:0 16px;">
                                             <p class="sub-heading" style="color:#3c3c3b;font-size:24px;font-weight:700;line-height:32px;margin:0;padding:8px 16px;">
-                                                {{ $data['childName'] }} recently completed a Bikeability cycle training course. Well done!
+                                                {{ $data['childName'] }} recently completed {{ $completedCourse }}. Well done!
                                             </p>
                                         </td>
                                     </tr>

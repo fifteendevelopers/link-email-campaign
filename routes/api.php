@@ -55,7 +55,8 @@ Route::middleware(['throttle:60,1', 'campaign.api'])->group(function (): void {
 |     "provider_name": "Anytown Cycling Club",
 |     "provider_public_email_address": "info@anytowncyclingclub.org",
 |     "outcomes_url": "https://club.bikeability.org.uk",   (optional, rider report)
-|     "survey_link_url": "https://survey.example.com"      (optional, parent survey)
+|     "survey_link_url": "https://survey.example.com",     (optional, parent survey)
+|     "outcome_survey_course_level": "Level 2"            (optional, parent survey)
 | }
 |
 */

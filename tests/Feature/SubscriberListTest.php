@@ -53,6 +53,8 @@ class SubscriberListTest extends TestCase
             'delivery_status' => 'active',
             'delivery_id' => 134772,
             'consent_id' => 486732,
+            'course_level' => 'Level 2',
+            'outcome_survey_course_level' => 'Level 1',
             'journey_confirmation_start_date' => '2026-10-20',
         ]);
 
@@ -65,13 +67,25 @@ class SubscriberListTest extends TestCase
 
         $this->get(route('subscribers.rows', 'parents'))
             ->assertOk()
+            ->assertSee('class="sticky-start"', false)
+            ->assertSee('sticky-course sticky-edge', false)
             ->assertSee('parent@example.com')
             ->assertSee('Jane Parent')
-            ->assertSee('Delivery ID')
-            ->assertSee('Consent ID')
-            ->assertSee('Last updated')
-            ->assertSee('134772')
-            ->assertSee('486732')
+            ->assertSeeInOrder([
+                'Subscriber',
+                'Delivery / Course',
+                'Consent confirmation',
+                'parent@example.com',
+                'Last updated',
+                'Delivery ID',
+                '134772',
+                'Consent ID',
+                '486732',
+                'Course Level',
+                'Level 2',
+                'Course Survey Level',
+                'Level 1',
+            ], false)
             ->assertSee('Consent confirmation')
             ->assertSee('Cycle and helmet check')
             ->assertSee('Pre-course FAQ')
@@ -89,9 +103,16 @@ class SubscriberListTest extends TestCase
         $this->get(route('subscribers.rows', 'schools'))
             ->assertOk()
             ->assertSee('school@example.com')
-            ->assertSee('Delivery ID')
-            ->assertSee('Last updated')
+            ->assertSee('sticky-start sticky-edge', false)
+            ->assertDontSee('sticky-course', false)
+            ->assertSeeInOrder([
+                'school@example.com',
+                'Delivery ID',
+                'Last updated',
+            ])
+            ->assertDontSee('Delivery / Course')
             ->assertDontSee('Consent ID')
+            ->assertDontSee('Course Survey Level')
             ->assertSee('Booking confirmation')
             ->assertSee('Consent check')
             ->assertSee('Outstanding consent check')
@@ -353,35 +374,37 @@ class SubscriberListTest extends TestCase
         ])->assertUnprocessable();
     }
 
-    public function test_combined_course_rider_report_has_separate_level_buttons(): void
+    public function test_combined_course_uses_the_single_rider_report(): void
     {
         ParentSubscriber::create([
             'email_address' => 'combined@example.com',
             'child_name' => 'Sam Child',
             'course_level' => 'Level 1 & 2 Combined',
+            'outcome_survey_course_level' => 'Level 1 & 2 Combined',
             'delivery_status' => 'active',
-            'outcomes_journey_level_1_start_date' => '2026-10-20',
-            'outcomes_journey_level_2_start_date' => '2026-10-21',
-            'outcome_survey_comms_date' => '2026-10-23',
+            'outcomes_journey_start_date' => '2026-10-20',
+            'outcome_survey_comms_date' => '2026-10-22',
         ]);
 
         $this->get(route('subscribers.rows', 'parents'))
             ->assertOk()
-            ->assertSee('Course: Level 1 &amp; 2 Combined', false)
-            ->assertSee('data-column="outcomes_journey_level_1_start_date"', false)
-            ->assertSee('data-column="outcomes_journey_level_2_start_date"', false)
+            ->assertSeeInOrder([
+                'Delivery / Course',
+                'Course Level',
+                'Level 1 &amp; 2 Combined',
+                'Course Survey Level',
+                'Level 1 &amp; 2 Combined',
+            ], false)
+            ->assertSee('data-column="outcomes_journey_start_date"', false)
             ->assertSee('data-column="outcome_survey_comms_date"', false)
-            ->assertDontSee('outcome_survey_comms_level_', false)
-            ->assertSee('data-sent-column="outcomes_journey_level_1_sent_at"', false)
-            ->assertSee('data-sent-column="outcomes_journey_level_2_sent_at"', false)
-            ->assertDontSee('data-sent-column="outcomes_journey_sent_at"', false)
-            ->assertDontSee('data-column="outcomes_journey_start_date"', false)
+            ->assertSee('data-sent-column="outcomes_journey_sent_at"', false)
             ->assertSee('data-sent-column="outcome_survey_sent_at"', false)
-            ->assertSee('Send Rider report Level 1 email', false)
-            ->assertSee('Send Rider report Level 2 email', false)
+            ->assertSee('Send Rider report email', false)
             ->assertSee('Send Parent survey email', false)
-            ->assertDontSee('Send Parent survey Level', false)
-            ->assertSee('>Level 1<', false)
-            ->assertSee('>Level 2<', false);
+            ->assertDontSee('data-sent-column="outcomes_journey_level_1_sent_at"', false)
+            ->assertDontSee('data-sent-column="outcomes_journey_level_2_sent_at"', false)
+            ->assertDontSee('Send Rider report Level', false)
+            ->assertDontSee('>Level 1<', false)
+            ->assertDontSee('>Level 2<', false);
     }
 }

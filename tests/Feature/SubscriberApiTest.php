@@ -243,6 +243,7 @@ class SubscriberApiTest extends TestCase
             'Name' => 'Jane Parent',
             'CustomFields' => [
                 ['Key' => 'OutcomesJourneyStartDate', 'Value' => '2026-10-20'],
+                ['Key' => 'OutcomeSurveyCourseLevel', 'Value' => 'Level 2'],
                 ['Key' => 'BikeabilityClubLink', 'Value' => 'https://club.example.com'],
                 ['Key' => 'SurveyLink', 'Value' => 'https://survey.example.com'],
             ],
@@ -253,8 +254,7 @@ class SubscriberApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.outcomes_journey_start_date', '2026-10-20')
-            ->assertJsonPath('data.outcomes_journey_level_1_start_date', null)
-            ->assertJsonPath('data.outcomes_journey_level_2_start_date', null)
+            ->assertJsonPath('data.outcome_survey_course_level', 'Level 2')
             ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-22')
             ->assertJsonPath('data.bikeability_club_link', 'https://club.example.com');
 
@@ -266,14 +266,15 @@ class SubscriberApiTest extends TestCase
         ]);
     }
 
-    public function test_combined_course_completion_schedules_both_rider_report_dates(): void
+    public function test_changed_outcome_date_resets_rider_report_and_survey_sent_markers(): void
     {
         ParentSubscriber::create([
             'email_address' => 'parent@example.com',
             'delivery_id' => 3,
             'course_level' => 'Level 1 & 2 Combined',
-            'outcomes_journey_level_1_sent_at' => '2026-10-01 08:00:00',
-            'outcomes_journey_level_2_sent_at' => '2026-10-01 08:00:00',
+            'outcomes_journey_start_date' => '2026-10-01',
+            'outcomes_journey_sent_at' => '2026-10-01 08:00:00',
+            'outcome_survey_comms_date' => '2026-10-03',
             'outcome_survey_sent_at' => '2026-10-03 08:00:00',
         ]);
 
@@ -285,16 +286,14 @@ class SubscriberApiTest extends TestCase
             ],
         ])
             ->assertOk()
-            ->assertJsonPath('data.outcomes_journey_level_1_start_date', '2026-10-20')
-            ->assertJsonPath('data.outcomes_journey_level_2_start_date', '2026-10-20')
-            ->assertJsonPath('data.outcomes_journey_start_date', null)
+            ->assertJsonPath('data.course_level', 'Level 1 & 2 Combined')
+            ->assertJsonPath('data.outcomes_journey_start_date', '2026-10-20')
             ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-22')
-            ->assertJsonPath('data.outcomes_journey_level_1_sent_at', null)
-            ->assertJsonPath('data.outcomes_journey_level_2_sent_at', null)
+            ->assertJsonPath('data.outcomes_journey_sent_at', null)
             ->assertJsonPath('data.outcome_survey_sent_at', null);
     }
 
-    public function test_level_2_course_completion_schedules_only_the_level_2_rider_report(): void
+    public function test_level_2_course_completion_schedules_the_rider_report(): void
     {
         ParentSubscriber::create([
             'email_address' => 'parent@example.com',
@@ -309,8 +308,6 @@ class SubscriberApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.outcomes_journey_start_date', '2026-10-20')
-            ->assertJsonPath('data.outcomes_journey_level_1_start_date', null)
-            ->assertJsonPath('data.outcomes_journey_level_2_start_date', null)
             ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-22');
     }
 

@@ -78,8 +78,6 @@ class SendDueParentCommunicationsTest extends TestCase
         $this->assertNotNull($subscriber->cycle_and_helmet_check_sent_at);
         $this->assertNotNull($subscriber->pre_course_faq_sent_at);
         $this->assertNotNull($subscriber->outcomes_journey_sent_at);
-        $this->assertNull($subscriber->outcomes_journey_level_1_sent_at);
-        $this->assertNull($subscriber->outcomes_journey_level_2_sent_at);
         $this->assertNotNull($subscriber->outcome_survey_sent_at);
         $this->assertDatabaseCount('email_trackings', 5);
 
@@ -89,48 +87,7 @@ class SendDueParentCommunicationsTest extends TestCase
         $this->assertDatabaseCount('email_trackings', 5);
     }
 
-    public function test_combined_course_sends_separate_level_1_and_level_2_outcome_emails(): void
-    {
-        Carbon::setTestNow('2026-10-20 08:00:00 Europe/London');
-        Mail::fake();
-
-        $subscriber = ParentSubscriber::create([
-            'email_address' => 'combined@example.com',
-            'delivery_status' => 'active',
-            'child_name' => 'Sam Child',
-            'course_level' => 'Level 1 & 2 Combined',
-            'outcomes_journey_level_1_start_date' => '2026-10-20',
-            'outcomes_journey_level_2_start_date' => '2026-10-22',
-            'outcome_survey_comms_date' => '2026-10-24',
-        ]);
-
-        SendDueParentCommunications::dispatchSync();
-
-        Mail::assertSent(CampaignMail::class, 1);
-        $subscriber->refresh();
-        $this->assertNotNull($subscriber->outcomes_journey_level_1_sent_at);
-        $this->assertNull($subscriber->outcomes_journey_level_2_sent_at);
-        $this->assertNull($subscriber->outcome_survey_sent_at);
-
-        Carbon::setTestNow('2026-10-22 08:00:00 Europe/London');
-        SendDueParentCommunications::dispatchSync();
-
-        $subscriber->refresh();
-        $this->assertNotNull($subscriber->outcomes_journey_level_2_sent_at);
-        $this->assertNull($subscriber->outcome_survey_sent_at);
-        Mail::assertSent(CampaignMail::class, 2);
-
-        Carbon::setTestNow('2026-10-24 08:00:00 Europe/London');
-        SendDueParentCommunications::dispatchSync();
-
-        $subscriber->refresh();
-        $this->assertNotNull($subscriber->outcome_survey_sent_at);
-        Mail::assertSent(CampaignMail::class, 3);
-        $this->assertCount(2, Mail::sent(CampaignMail::class, static fn (CampaignMail $mail): bool => $mail->data['template'] === 'emails.parent_comms.post_course.rider_report'));
-        $this->assertCount(1, Mail::sent(CampaignMail::class, static fn (CampaignMail $mail): bool => $mail->data['template'] === 'emails.parent_comms.post_course.parent_survey'));
-    }
-
-    public function test_level_2_course_sends_only_the_level_2_outcome_emails(): void
+    public function test_level_2_course_sends_the_rider_report(): void
     {
         Carbon::setTestNow('2026-10-20 08:00:00 Europe/London');
         Mail::fake();
@@ -140,8 +97,8 @@ class SendDueParentCommunicationsTest extends TestCase
             'delivery_status' => 'active',
             'child_name' => 'Sam Child',
             'course_level' => 'Level 2',
+            'outcome_survey_course_level' => 'Level 2',
             'outcomes_journey_start_date' => '2026-10-20',
-            'outcomes_journey_level_2_start_date' => '2026-10-20',
             'outcome_survey_comms_date' => '2026-10-20',
         ]);
 
@@ -150,8 +107,14 @@ class SendDueParentCommunicationsTest extends TestCase
         Mail::assertSent(CampaignMail::class, 2);
         $subscriber->refresh();
         $this->assertNotNull($subscriber->outcomes_journey_sent_at);
-        $this->assertNull($subscriber->outcomes_journey_level_1_sent_at);
-        $this->assertNull($subscriber->outcomes_journey_level_2_sent_at);
         $this->assertNotNull($subscriber->outcome_survey_sent_at);
+        $this->assertCount(1, Mail::sent(CampaignMail::class, static fn (CampaignMail $mail): bool => $mail->data['template'] === 'emails.parent_comms.post_course.rider_report'));
+
+        $survey = Mail::sent(CampaignMail::class, static fn (CampaignMail $mail): bool => $mail->data['template'] === 'emails.parent_comms.post_course.parent_survey')->first();
+        $this->assertNotNull($survey);
+        $this->assertSame('Level 2', $survey->data['outcomeSurveyCourseLevel']);
+
+        $html = view('emails.parent_comms.post_course.parent_survey', ['data' => $survey->data])->render();
+        $this->assertStringContainsString('a Bikeability Level 2 cycle training course', $html);
     }
 }

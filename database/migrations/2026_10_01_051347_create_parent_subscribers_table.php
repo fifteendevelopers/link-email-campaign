@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('delivery_status')->default('active');
             $table->string('parent_name')->nullable();
             $table->string('child_name')->nullable();
-            $table->string('course_level')->nullable();
             $table->string('establishment_name')->nullable();
             $table->string('provider_name')->nullable();
             $table->string('provider_public_email_address')->nullable();
@@ -33,13 +32,12 @@ return new class extends Migration
             $table->date('pre_course_faq_comms_date')->nullable()->index('parent_faq_date_idx'); // 5 days after Cycle and Helmet Check Email - Send 'Pre Course - FAQ' Email
             $table->timestamp('pre_course_faq_sent_at')->nullable();
 
+            $table->string('course_level')->nullable();
             $table->date('outcomes_journey_start_date')->nullable()->index('parent_outcome_date_idx'); // Send Outcome Email - 'Rider Report' Email
             $table->timestamp('outcomes_journey_sent_at')->nullable();
-            $table->date('outcomes_journey_level_1_start_date')->nullable()->index('parent_outcome_l1_date_idx');
-            $table->timestamp('outcomes_journey_level_1_sent_at')->nullable();
-            $table->date('outcomes_journey_level_2_start_date')->nullable()->index('parent_outcome_l2_date_idx');
-            $table->timestamp('outcomes_journey_level_2_sent_at')->nullable();
-            $table->date('outcome_survey_comms_date')->nullable()->index('parent_survey_date_idx'); // 2 days after Outcome Email - Send Parent Survey Email
+
+            $table->string('outcome_survey_course_level')->nullable();
+            $table->date('outcome_survey_comms_date')->nullable()->index('parent_survey_date_idx'); // 2 weeks after Completion of Delivery - Send Parent Survey Email
             $table->timestamp('outcome_survey_sent_at')->nullable();
             $table->string('bikeability_club_link')->nullable();
             $table->string('survey_link')->nullable();
