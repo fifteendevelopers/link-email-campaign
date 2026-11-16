@@ -8,7 +8,6 @@ use App\Jobs\SendDueParentCommunications;
 use App\Jobs\SendDueSchoolCommunications;
 use App\Models\ParentSubscriber;
 use App\Models\SchoolSubscriber;
-use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
 
@@ -135,23 +134,6 @@ final class SubscriberCommunications
     }
 
     /**
-     * The parent survey is two days after the rider-report date.
-     *
-     * @param  array<string, mixed>  $attributes
-     * @return array<string, mixed>
-     */
-    public static function scheduleOutcomeDates(array $attributes): array
-    {
-        if (! array_key_exists('outcomes_journey_start_date', $attributes)) {
-            return $attributes;
-        }
-
-        $attributes['outcome_survey_comms_date'] = self::surveyDate($attributes['outcomes_journey_start_date']);
-
-        return $attributes;
-    }
-
-    /**
      * @return list<string>
      */
     public static function dateColumns(string $audience): array
@@ -196,15 +178,6 @@ final class SubscriberCommunications
         }
 
         return null;
-    }
-
-    private static function surveyDate(mixed $startDate): ?string
-    {
-        if ($startDate === null || $startDate === '') {
-            return null;
-        }
-
-        return CarbonImmutable::parse((string) $startDate)->addDays(2)->toDateString();
     }
 
     /**

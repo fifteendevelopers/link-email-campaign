@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ParentSubscriberRequest;
 use App\Http\Requests\SendParentEmailRequest;
 use App\Models\ParentSubscriber;
-use App\Support\SubscriberCommunications;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -232,17 +231,14 @@ class ParentSubscriberController extends Controller
     }
 
     /**
-     * Derive the survey date, then clear sent markers whose dates changed.
+     * Clear sent markers whose dates changed.
      *
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */
     private function attributesForSave(array $attributes, ?ParentSubscriber $subscriber): array
     {
-        return $this->resetChangedCommunicationDates(
-            SubscriberCommunications::scheduleOutcomeDates($attributes),
-            $subscriber,
-        );
+        return $this->resetChangedCommunicationDates($attributes, $subscriber);
     }
 
     /**

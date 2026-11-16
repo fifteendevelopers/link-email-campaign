@@ -255,18 +255,18 @@ class SubscriberApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.outcomes_journey_start_date', '2026-10-20')
             ->assertJsonPath('data.outcome_survey_course_level', 'Level 2')
-            ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-22')
+            ->assertJsonPath('data.outcome_survey_comms_date', null)
             ->assertJsonPath('data.bikeability_club_link', 'https://club.example.com');
 
         $this->assertDatabaseCount('parent_subscribers', 1);
         $this->assertDatabaseHas('parent_subscribers', [
             'delivery_id' => 3,
             'survey_link' => 'https://survey.example.com',
-            'outcome_survey_comms_date' => '2026-10-22',
+            'outcome_survey_comms_date' => null,
         ]);
     }
 
-    public function test_changed_outcome_date_resets_rider_report_and_survey_sent_markers(): void
+    public function test_changed_rider_report_date_does_not_change_the_survey_date(): void
     {
         ParentSubscriber::create([
             'email_address' => 'parent@example.com',
@@ -278,7 +278,7 @@ class SubscriberApiTest extends TestCase
             'outcome_survey_sent_at' => '2026-10-03 08:00:00',
         ]);
 
-        $this->postJson('/api/emails/parent/course-completion', [
+        $this->postJson('/api/subscribers/parents', [
             'EmailAddress' => 'parent@example.com',
             'CustomFields' => [
                 ['Key' => 'OutcomesJourneyStartDate', 'Value' => '2026-10-20'],
@@ -288,9 +288,47 @@ class SubscriberApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.course_level', 'Level 1 & 2 Combined')
             ->assertJsonPath('data.outcomes_journey_start_date', '2026-10-20')
-            ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-22')
-            ->assertJsonPath('data.outcomes_journey_sent_at', null)
+            ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-03')
+            ->assertJsonPath('data.outcomes_journey_sent_at', null);
+
+        $this->assertDatabaseHas('parent_subscribers', [
+            'email_address' => 'parent@example.com',
+            'outcome_survey_comms_date' => '2026-10-03',
+        ]);
+        $this->assertNotNull(ParentSubscriber::query()->first()?->outcome_survey_sent_at);
+    }
+
+    public function test_outcome_survey_comms_date_is_set_by_its_own_payload(): void
+    {
+        ParentSubscriber::create([
+            'email_address' => 'joe@fifteen.co.uk',
+            'consent_id' => 518539,
+            'name' => 'Joe Jackson',
+            'outcomes_journey_start_date' => '2026-11-15',
+            'outcome_survey_comms_date' => '2026-11-01',
+            'outcome_survey_sent_at' => '2026-11-01 08:00:00',
+        ]);
+
+        $this->postJson('/api/subscribers/parents', [
+            'EmailAddress' => 'joe@fifteen.co.uk',
+            'Name' => 'Joe Jackson',
+            'CustomFields' => [
+                ['Key' => 'OutcomeSurveyCommsDate', 'Value' => '2026-11-17'],
+                ['Key' => 'OutcomeSurveyCourseLevel', 'Value' => 'Level 2'],
+            ],
+            'Resubscribe' => true,
+            'RestartSubscriptionBasedAutoresponders' => true,
+            'ConsentToTrack' => 'Yes',
+            'ConsentToSendSms' => 'Yes',
+            'consent_id' => 518539,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.outcomes_journey_start_date', '2026-11-15')
+            ->assertJsonPath('data.outcome_survey_comms_date', '2026-11-17')
+            ->assertJsonPath('data.outcome_survey_course_level', 'Level 2')
             ->assertJsonPath('data.outcome_survey_sent_at', null);
+
+        $this->assertDatabaseCount('parent_subscribers', 1);
     }
 
     public function test_level_2_course_completion_schedules_the_rider_report(): void
@@ -298,6 +336,7 @@ class SubscriberApiTest extends TestCase
         ParentSubscriber::create([
             'email_address' => 'parent@example.com',
             'course_level' => 'Level 2',
+            'outcome_survey_comms_date' => '2026-11-17',
         ]);
 
         $this->postJson('/api/emails/parent/course-completion', [
@@ -308,7 +347,7 @@ class SubscriberApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.outcomes_journey_start_date', '2026-10-20')
-            ->assertJsonPath('data.outcome_survey_comms_date', '2026-10-22');
+            ->assertJsonPath('data.outcome_survey_comms_date', '2026-11-17');
     }
 
     public function test_delivery_status_payload_updates_the_subscriber(): void
