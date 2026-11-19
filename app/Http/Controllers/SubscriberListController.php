@@ -219,7 +219,6 @@ class SubscriberListController extends Controller
             'title' => $definition['label'],
             'noun' => $definition['noun'],
             'statuses' => SubscriberCommunications::statuses($audience),
-            'communicationCount' => count($definition['communications']),
         ]);
     }
 

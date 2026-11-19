@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EmailLogController;
 use App\Http\Controllers\MailgunWebhookController;
 use App\Http\Controllers\SubscriberListController;
 use App\Jobs\SendDueParentCommunications;
@@ -19,6 +20,16 @@ Route::get('/parent-subscribers', [SubscriberListController::class, 'parents'])
 
 Route::get('/school-subscribers', [SubscriberListController::class, 'schools'])
     ->name('subscribers.schools');
+
+Route::get('/email-logs', [EmailLogController::class, 'index'])
+    ->name('email-logs.index');
+
+Route::get('/email-logs/rows', [EmailLogController::class, 'rows'])
+    ->name('email-logs.rows');
+
+Route::get('/email-logs/{emailLog}', [EmailLogController::class, 'show'])
+    ->whereNumber('emailLog')
+    ->name('email-logs.show');
 
 Route::get('/subscribers/{audience}/rows', [SubscriberListController::class, 'rows'])
     ->where('audience', 'parents|schools')
