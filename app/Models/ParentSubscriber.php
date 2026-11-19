@@ -39,6 +39,7 @@ class ParentSubscriber extends Model
         'restart_subscription_based_autoresponders',
         'consent_to_track',
         'consent_to_send_sms',
+        'is_combined_course',
     ];
 
     protected function casts(): array
@@ -59,6 +60,7 @@ class ParentSubscriber extends Model
             'outcome_survey_sent_at' => 'datetime',
             'resubscribe' => 'boolean',
             'restart_subscription_based_autoresponders' => 'boolean',
+            'is_combined_course' => 'boolean',
         ];
     }
 }

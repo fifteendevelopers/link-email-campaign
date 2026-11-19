@@ -33,6 +33,7 @@ return new class extends Migration
             $table->timestamp('pre_course_faq_sent_at')->nullable();
 
             $table->string('course_level')->nullable();
+            $table->boolean('is_combined_course')->default(false);
             $table->date('outcomes_journey_start_date')->nullable()->index('parent_outcome_date_idx'); // Send Outcome Email - 'Rider Report' Email
             $table->timestamp('outcomes_journey_sent_at')->nullable();
 

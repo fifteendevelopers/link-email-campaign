@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateCampaignApi;
+use App\Http\Middleware\LogIncomingApiRequest;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            'api.log' => LogIncomingApiRequest::class,
             'campaign.api' => AuthenticateCampaignApi::class,
         ]);
 

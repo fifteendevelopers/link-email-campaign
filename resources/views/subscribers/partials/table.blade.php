@@ -132,7 +132,7 @@
                                     <div class="meta-list">
                                         <div class="meta-row"><span class="meta-label">Delivery ID</span> {{ $subscriber->delivery_id ?: '—' }}</div>
                                         <div class="meta-row"><span class="meta-label">Consent ID</span> {{ $subscriber->consent_id ?: '—' }}</div>
-                                        <div class="meta-row"><span class="meta-label">Course Level</span> {{ $subscriber->course_level ?: '—' }}</div>
+                                        <div class="meta-row"><span class="meta-label">Course Level</span> {{ $subscriber->course_level ?: '—' }} {{ $subscriber->is_combined_course ? ' (comb)' : '' }}</div>
                                         <div class="meta-row"><span class="meta-label">Course Survey Level</span> {{ $subscriber->outcome_survey_course_level ?: '—' }}</div>
                                     </div>
                                 </td>

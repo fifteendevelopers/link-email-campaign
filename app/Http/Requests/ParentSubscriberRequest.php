@@ -23,6 +23,7 @@ class ParentSubscriberRequest extends SubscriberRequest
             'parent_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'child_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'course_level' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'is_combined_course' => ['sometimes', 'boolean'],
             'outcome_survey_course_level' => ['sometimes', 'nullable', 'string', 'max:255'],
             'establishment_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'provider_name' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -65,6 +66,12 @@ class ParentSubscriberRequest extends SubscriberRequest
             $date = $this->dateValue($attributes['comms_start_date']);
             $attributes['cycle_and_helmet_check_comms_date'] = $date?->toDateString();
             $attributes['pre_course_faq_comms_date'] = $date?->addDays(5)->toDateString();
+        }
+
+        foreach (['course_level', 'outcome_survey_course_level'] as $levelField) {
+            if (array_key_exists($levelField, $attributes)) {
+                $attributes[$levelField] = $this->courseLevelLabel($attributes[$levelField]);
+            }
         }
 
         return $attributes;
@@ -133,7 +140,9 @@ class ParentSubscriberRequest extends SubscriberRequest
                 continue;
             }
 
-            $attributes[$databaseKey] = $value;
+            $attributes[$databaseKey] = $databaseKey === 'is_combined_course'
+                ? $this->booleanValue($value)
+                : $value;
         }
 
         return $attributes;
@@ -150,6 +159,7 @@ class ParentSubscriberRequest extends SubscriberRequest
             'parentname' => 'parent_name',
             'childname' => 'child_name',
             'courselevel' => 'course_level',
+            'iscombinedcourse' => 'is_combined_course',
             'outcomesurveycourselevel' => 'outcome_survey_course_level',
             'establishmentname' => 'establishment_name',
             'providername' => 'provider_name',
@@ -289,6 +299,19 @@ class ParentSubscriberRequest extends SubscriberRequest
         return null;
     }
 
+    private function booleanValue(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value === 1;
+        }
+
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'y'], true);
+    }
+
     private function dateValue(mixed $value): ?CarbonImmutable
     {
         if ($value === null || $value === '') {
@@ -296,5 +319,18 @@ class ParentSubscriberRequest extends SubscriberRequest
         }
 
         return CarbonImmutable::parse((string) $value);
+    }
+
+    /**
+     * Turn incoming slugs such as level_1 and plus_learn into Level 1 and Plus Learn.
+     * Labels that are already readable are left unchanged.
+     */
+    private function courseLevelLabel(mixed $value): mixed
+    {
+        if (! is_string($value) || ! str_contains($value, '_')) {
+            return $value;
+        }
+
+        return ucwords(str_replace('_', ' ', strtolower(trim($value))));
     }
 }

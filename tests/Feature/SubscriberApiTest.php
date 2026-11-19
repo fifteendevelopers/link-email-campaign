@@ -131,6 +131,72 @@ class SubscriberApiTest extends TestCase
         ]);
     }
 
+    public function test_course_level_slugs_are_stored_as_labels(): void
+    {
+        $this->postJson('/api/subscribers/parents', [
+            'EmailAddress' => 'parent@example.com',
+            'CustomFields' => [
+                ['Key' => 'CourseLevel', 'Value' => 'level_1'],
+                ['Key' => 'OutcomeSurveyCourseLevel', 'Value' => 'plus_learn'],
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.course_level', 'Level 1')
+            ->assertJsonPath('data.outcome_survey_course_level', 'Plus Learn');
+
+        $this->postJson('/api/subscribers/parents', [
+            'EmailAddress' => 'parent@example.com',
+            'CustomFields' => [
+                ['Key' => 'CourseLevel', 'Value' => 'level_2'],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.course_level', 'Level 2')
+            ->assertJsonPath('data.outcome_survey_course_level', 'Plus Learn');
+
+        $this->postJson('/api/subscribers/parents', [
+            'EmailAddress' => 'readable@example.com',
+            'CustomFields' => [
+                ['Key' => 'CourseLevel', 'Value' => 'Level 1 & 2 Combined'],
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.course_level', 'Level 1 & 2 Combined');
+    }
+
+    public function test_combined_course_custom_field_updates_the_subscriber(): void
+    {
+        ParentSubscriber::create([
+            'email_address' => 'parent@example.com',
+            'course_level' => 'Level 1',
+            'is_combined_course' => false,
+        ]);
+
+        $this->postJson('/api/subscribers/parents', [
+            'EmailAddress' => 'parent@example.com',
+            'CustomFields' => [
+                ['Key' => 'CourseLevel', 'Value' => 'Level 1 & 2'],
+                ['Key' => 'IsCombinedCourse', 'Value' => true],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.course_level', 'Level 1 & 2')
+            ->assertJsonPath('data.is_combined_course', true);
+
+        $this->assertTrue(ParentSubscriber::query()->first()?->is_combined_course);
+
+        $this->postJson('/api/subscribers/parents', [
+            'EmailAddress' => 'parent@example.com',
+            'CustomFields' => [
+                ['Key' => 'IsCombinedCourse', 'Value' => false],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.is_combined_course', false);
+
+        $this->assertFalse(ParentSubscriber::query()->first()?->is_combined_course);
+    }
+
     public function test_campaign_monitor_parent_payload_accepts_an_empty_custom_field_value(): void
     {
         $this->postJson('/api/subscribers/parents', [
